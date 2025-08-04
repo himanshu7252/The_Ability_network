@@ -8,7 +8,6 @@ import ServiceDetailsScreen from '../screens/ServiceDetailsScreen';
 import AboutScreen from '../screens/AboutScreen';
 import ContactScreen from '../screens/ContactScreen';
 
-// ✅ Define the stack type with full params
 export type RootStackParamList = {
   Home: undefined;
   Search: undefined;

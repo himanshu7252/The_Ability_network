@@ -7,7 +7,8 @@ import {
   Text,
   TouchableOpacity,
   Modal,
-  FlatList
+  FlatList,
+  Platform,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/AppNavigator';
@@ -41,59 +42,66 @@ const ServiceSearchScreen = ({ navigation }: Props) => {
     onSelect: (val: string) => void
   ) => (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.modalContainer}>
-        <FlatList
-          data={data}
-          keyExtractor={(item) => item}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() => {
-                onSelect(item);
-                setVisible(false);
-              }}
-              style={styles.modalItem}
-            >
-              <Text>{item}</Text>
-            </TouchableOpacity>
-          )}
-        />
-        <Button title="Close" onPress={() => setVisible(false)} />
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <FlatList
+            data={data}
+            keyExtractor={(item) => item}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() => {
+                  onSelect(item);
+                  setVisible(false);
+                }}
+                style={styles.modalItem}
+              >
+                <Text style={styles.modalItemText}>{item}</Text>
+              </TouchableOpacity>
+            )}
+          />
+          <Button title="Close" onPress={() => setVisible(false)} />
+        </View>
       </View>
     </Modal>
   );
 
   return (
     <View style={styles.container}>
+      <Text style={styles.heading}>Search Services</Text>
+
       <TextInput
         placeholder="Search keyword..."
         style={styles.input}
         value={query}
         onChangeText={setQuery}
+        placeholderTextColor="#888"
       />
 
       <TouchableOpacity style={styles.selector} onPress={() => openModal('city')}>
-        <Text>{city || 'Select City'} ▼</Text>
+        <Text style={styles.selectorText}>{city || 'Select City'} ▼</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.selector} onPress={() => openModal('state')}>
-        <Text>{state || 'Select State'} ▼</Text>
+        <Text style={styles.selectorText}>{state || 'Select State'} ▼</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.selector} onPress={() => openModal('disability')}>
-        <Text>{disability || 'Select Disability'} ▼</Text>
+        <Text style={styles.selectorText}>{disability || 'Select Disability'} ▼</Text>
       </TouchableOpacity>
 
-      <Button
-        title="Search"
+      <TouchableOpacity
+        style={styles.searchButton}
         onPress={() =>
           navigation.navigate('Results', {
             query,
             cities: city,
             states: state,
-            disabilities: disability
-          } as any) // type cast to avoid TS error if params are not in type
+            disabilities: disability,
+          } as any)
         }
-      />
+      >
+        <Text style={styles.searchButtonText}>Search</Text>
+      </TouchableOpacity>
 
       {renderModal(cityModalVisible, setCityModalVisible, cities, setCity)}
       {renderModal(stateModalVisible, setStateModalVisible, states, setState)}
@@ -105,34 +113,82 @@ const ServiceSearchScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16
+    padding: 20,
+    backgroundColor: '#f8f9fc',
+  },
+  heading: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 20,
+    color: '#1f1f1f',
+    textAlign: 'center',
   },
   input: {
     borderWidth: 1,
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10
+    borderColor: '#ddd',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: '#ffffff',
+    color: '#000',
+    elevation: 2,
   },
   selector: {
-    padding: 12,
+    padding: 14,
     borderWidth: 1,
-    borderRadius: 8,
-    marginBottom: 10,
-    backgroundColor: '#f0f0f0'
+    borderColor: '#ccc',
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: '#e6ecf5',
+  },
+  selectorText: {
+    color: '#1f1f1f',
+    fontWeight: '600',
+  },
+  searchButton: {
+    backgroundColor: '#4b7bec',
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#4b7bec',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  searchButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: '#00000066',
+    justifyContent: 'center',
+    padding: 20,
   },
   modalContainer: {
-    marginTop: '50%',
-    backgroundColor: 'white',
+    backgroundColor: '#fff',
+    borderRadius: 14,
     padding: 20,
-    borderRadius: 10,
-    marginHorizontal: 20,
-    elevation: 5
+    maxHeight: '70%',
   },
   modalItem: {
-    padding: 10,
+    padding: 12,
     borderBottomWidth: 1,
-    borderColor: '#ddd'
-  }
+    borderBottomColor: '#eee',
+  },
+  modalItemText: {
+    fontSize: 16,
+    color: '#333',
+  },
 });
 
 export default ServiceSearchScreen;
