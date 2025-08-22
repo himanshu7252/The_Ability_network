@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { ScrollView } from 'react-native-gesture-handler';
 
 // ==== Type Definitions ==== //
 type Contact = {
@@ -233,7 +234,7 @@ const SolutionProvidersScreen = () => {
   }
 
   return (
-    <View style={styles.screenBackground}>
+    <ScrollView style={styles.screenBackground}>
       <View style={styles.headerSection}>
         <Image source={require('../assets/images/logo.png')} style={styles.logo} />
         <Text style={styles.title}>Find Organisations and People who care about making a difference</Text>
@@ -345,7 +346,7 @@ const SolutionProvidersScreen = () => {
           </View>
         </View>
       </Modal>
-    </View>
+    </ScrollView>
   );
 };
 
