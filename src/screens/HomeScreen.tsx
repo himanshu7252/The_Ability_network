@@ -17,11 +17,9 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 
 const { width } = Dimensions.get('window');
 
-// Define your stack param list
 type RootStackParamList = {
   PartnersScreen: undefined;
-  // add other screens here if needed
-};
+  };
 
 const HomeScreen = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -38,7 +36,6 @@ const HomeScreen = () => {
     navigation.navigate('PartnersScreen');
   };
 
-  // Feature data
   const features = [
     {
       icon: require('../assets/icons/digital.png'),
@@ -68,8 +65,7 @@ const HomeScreen = () => {
     
   ];
 
-  // Stats data
-  const stats = [
+   const stats = [
     { value: '26', label: 'Partner Organizations' },
     { value: '90+', label: 'Projects' },
     { value: '18+', label: 'States' },
@@ -82,7 +78,6 @@ const HomeScreen = () => {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.contentContainer}
     >
-      {/* Header Section */}
       <LinearGradient
         colors={['#0066b3', '#1c2325ff']}
         style={styles.header}
@@ -97,14 +92,12 @@ const HomeScreen = () => {
         <Text style={styles.title}>Ecosystem for Enabling Persons with Disabilities and their Caregivers</Text>
       </LinearGradient>
 
-      {/* Network Description */}
       <View style={styles.section}>
         <Text style={styles.description}>
           The Ability Network, a Tech Mahindra Foundation initiative, is an inclusive network of verified solution providers that provides access to curated information for persons with disabilities and their caregivers.
         </Text>
       </View>
 
-      {/* Vision & Mission Cards */}
       <View style={styles.cardContainer}>
         <View style={[styles.card, styles.visionCard]}>
           <Icon name="visibility" size={28} color="#0066b3" style={styles.cardIcon} />
@@ -123,7 +116,6 @@ const HomeScreen = () => {
         </View>
       </View>
 
-      {/* Features Grid */}
       <Text style={styles.sectionHeader}>Key Features</Text>
       <View style={styles.featuresContainer}>
         {features.map((feature, index) => (
@@ -141,7 +133,6 @@ const HomeScreen = () => {
         ))}
       </View>
 
-      {/* Ecosystem Banner */}
       <LinearGradient
         colors={['#0066b3', '#00a0dc']}
         style={styles.ecosystemBanner}
@@ -154,7 +145,6 @@ const HomeScreen = () => {
         </Text>
       </LinearGradient>
 
-      {/* Video Section */}
       <TouchableOpacity 
         style={styles.videoContainer} 
         onPress={handlePlayVideo}
@@ -169,7 +159,6 @@ const HomeScreen = () => {
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* Partners Section */}
       <TouchableOpacity 
         style={styles.partnersContainer}
         onPress={navigateToPartners}
@@ -186,7 +175,6 @@ const HomeScreen = () => {
         <Text style={styles.viewMore}>View all partners →</Text>
       </TouchableOpacity>
 
-      {/* CTA Section */}
       <View style={styles.ctaContainer}>
         <Text style={styles.ctaTitle}>Transform Lives Together</Text>
         <Text style={styles.ctaText}>
@@ -198,7 +186,6 @@ const HomeScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Foundation Section */}
       <View style={styles.foundationContainer}>
         <Text style={styles.sectionHeader}>About Tech Mahindra Foundation</Text>
         <Image 
@@ -227,7 +214,6 @@ const HomeScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Network Partners */}
       <View style={styles.networkPartners}>
         <Text style={styles.sectionHeader}>Our Network Partners</Text>
         <Text style={styles.partnerSubtitle}>Collaborating with leading organizations to create meaningful impact</Text>

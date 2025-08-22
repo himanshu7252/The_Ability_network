@@ -136,8 +136,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
   },
   logo: {
-    width: 60,                  // Set your desired width
-    aspectRatio: 1,             // If your logo is square; change if not
+    width: 60,                  
+    aspectRatio: 1,             
     marginRight: 10,
     resizeMode: 'contain',
 },

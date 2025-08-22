@@ -15,7 +15,6 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { ScrollView } from 'react-native-gesture-handler';
 
-// ==== Type Definitions ==== //
 type Contact = {
   category?: string;
   email?: string;
@@ -86,7 +85,6 @@ const SolutionProvidersScreen = () => {
   const [cities, setCities] = useState<string[]>([]);
   const [selectedState, setSelectedState] = useState<string | null>(null);
 
-  // Fetch and transform providers from API, grouping by organization+location
   const fetchProviders = async () => {
     try {
       setLoading(true);
@@ -354,9 +352,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   logo: {
-  width: 100,          // Set only width or height, not both
-  height: 100,  // Let aspectRatio determine the height dynamically
-  aspectRatio: 1,     // Set this to your logo's width-to-height ratio (1 = square)
+  width: 100,         
+  height: 100, 
+  aspectRatio: 1,     
   marginBottom: 4,
   resizeMode: 'contain',
 }

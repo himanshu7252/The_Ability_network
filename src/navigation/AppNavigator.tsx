@@ -3,7 +3,6 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import { createStackNavigator } from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-// Import screens
 import HomeScreen from '../screens/HomeScreen';
 import SolutionProvidersScreen from '../screens/SolutionProvidersScreen';
 import ProviderDetailsScreen from '../screens/ProviderDetailsScreen';
@@ -11,13 +10,10 @@ import EventsScreen from '../screens/EventsScreen';
 import BlogsScreen from '../screens/BlogsScreen';
 import ContactScreen from '../screens/ContactScreen';
 
-// Import drawer content
 import DrawerContent from '../components/DrawerContent';
 
-// Import types
 import { ServiceProvider } from '../types/apiTypes';
 
-// Define navigation param types
 export type RootStackParamList = {
   Home: undefined;
   SolutionProviders: undefined;
@@ -28,13 +24,12 @@ export type RootStackParamList = {
 
 export type SolutionProvidersStackParamList = {
   SolutionProvidersList: undefined;
-  ProviderDetails: { provider: ServiceProvider }; // Changed from providerId to provider
+  ProviderDetails: { provider: ServiceProvider }; 
 };
 
 const Drawer = createDrawerNavigator<RootStackParamList>();
 const Stack = createStackNavigator<SolutionProvidersStackParamList>();
 
-// Create a stack navigator for Solution Providers
 function SolutionProvidersStack() {
   return (
     <Stack.Navigator 
@@ -58,7 +53,6 @@ function SolutionProvidersStack() {
   );
 }
 
-// Rest of your AppNavigator code remains the same...
 
 const AppNavigator = () => {
   return (

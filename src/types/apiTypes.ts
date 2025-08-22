@@ -7,7 +7,7 @@ export interface Contact {
 }
 
 export interface Service {
-  id: number | string; // Accept either depending on API
+  id: number | string; 
   name: string;
   category?: string;
 }
@@ -21,7 +21,7 @@ export interface ServiceProvider {
   state: string;
   services: Service[];
   about?: string;
-  contact_info: Contact[]; // Changed from string to array of Contact objects
+  contact_info: Contact[]; 
 }
 
 export interface BlogPost {
