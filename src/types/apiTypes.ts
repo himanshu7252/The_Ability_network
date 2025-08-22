@@ -1,19 +1,27 @@
+export interface Contact {
+  category?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+}
+
 export interface Service {
-  id: number;
+  id: number | string; // Accept either depending on API
   name: string;
-  category: string;
+  category?: string;
 }
 
 export interface ServiceProvider {
-  id: number;
+  id: number | string;
   name: string;
-  type: string;
+  type?: string;
   location: string;
   city: string;
   state: string;
   services: Service[];
-  about: string;
-  contact_info: string;
+  about?: string;
+  contact_info: Contact[]; // Changed from string to array of Contact objects
 }
 
 export interface BlogPost {
@@ -21,7 +29,7 @@ export interface BlogPost {
   title: string;
   date: string;
   content: string;
-  imageUrl: string;
+  imageUrl?: string;
 }
 
 export interface Event {
@@ -30,7 +38,7 @@ export interface Event {
   location: string;
   date: string;
   description: string;
-  imageUrl: string;
+  imageUrl?: string;
 }
 
 export interface ApiResponse {

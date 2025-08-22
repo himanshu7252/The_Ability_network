@@ -9,40 +9,146 @@ import {
   FlatList,
   Modal,
   Dimensions,
-  Image
+  Image,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { ServiceProvider, ApiResponse } from '../types/apiTypes';
 
-// Add the missing Service type definition
-interface Service {
-  id: number;
+// ==== Type Definitions ==== //
+type Contact = {
+  category?: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+};
+
+type Address = {
+  address_label?: string;
+  address_line_1: string;
+  address_line_2?: string | null;
+  city: string;
+  contacts: Contact[];
+  organization_name: string;
+  pincode: number;
+  state: string;
+};
+
+type Service = {
+  id: string;
   name: string;
-  category: string;
-}
+  category?: string;
+};
+
+type SolutionProvider = {
+  id: string;
+  name: string;
+  location: string;
+  city: string;
+  state: string;
+  services: Service[];
+  about: string;
+  contact_info: Contact[];
+};
+
+type ApiResponse = {
+  services: Array<{
+    id: string;
+    organization_names: string[];
+    service_name: string;
+    service_description: string;
+    addresses: Address[];
+    cities: string[];
+    disabilities: string[];
+    states: string[];
+  }>;
+  total: number;
+  filtered_response: boolean;
+};
 
 type RootStackParamList = {
   SolutionProvidersList: undefined;
-  ProviderDetails: { provider: ServiceProvider };
+  ProviderDetails: { provider: SolutionProvider };
 };
 
 const { width } = Dimensions.get('window');
 
 const SolutionProvidersScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const [providers, setProviders] = useState<ServiceProvider[]>([]);
-  const [filteredProviders, setFilteredProviders] = useState<ServiceProvider[]>([]);
+  const [providers, setProviders] = useState<SolutionProvider[]>([]);
+  const [filteredProviders, setFilteredProviders] = useState<SolutionProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [totalProviders, setTotalProviders] = useState(0);
-  
-  // New state for location selection
   const [states, setStates] = useState<string[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [selectedState, setSelectedState] = useState<string | null>(null);
+
+  // Fetch and transform providers from API, grouping by organization+location
+  const fetchProviders = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('https://stg-api.abilitynetwork.in/api/services/search');
+      const data: ApiResponse = await response.json();
+
+      // Flatten and group by organization+city+state key
+      const flatProviders = data.services.flatMap(serviceGroup =>
+        serviceGroup.addresses.map(address => ({
+          orgKey: `${address.organization_name}__${address.city}__${address.state}`,
+          id: serviceGroup.id,
+          organization_name: address.organization_name,
+          location: `${address.city}, ${address.state}`,
+          city: address.city,
+          state: address.state,
+          service: {
+            id: serviceGroup.id,
+            name: serviceGroup.service_name,
+            category: 'Service',
+          },
+          about: serviceGroup.service_description,
+          contact_info: address.contacts,
+        }))
+      );
+
+      const groupedProvidersMap = new Map<string, SolutionProvider>();
+
+      flatProviders.forEach(item => {
+        if (!groupedProvidersMap.has(item.orgKey)) {
+          groupedProvidersMap.set(item.orgKey, {
+            id: item.orgKey,
+            name: item.organization_name,
+            location: item.location,
+            city: item.city,
+            state: item.state,
+            services: [item.service],
+            about: item.about,
+            contact_info: item.contact_info,
+          });
+        } else {
+          const existing = groupedProvidersMap.get(item.orgKey)!;
+          const serviceExists = existing.services.some(s => s.id === item.service.id);
+          if (!serviceExists) {
+            existing.services.push(item.service);
+          }
+        }
+      });
+
+      const providersData = Array.from(groupedProvidersMap.values());
+
+      setProviders(providersData);
+      setFilteredProviders(providersData);
+
+      const uniqueStates = [...new Set(providersData.map(p => p.state))].filter(Boolean) as string[];
+      setStates(uniqueStates);
+    } catch (error) {
+      console.error('Error fetching providers:', error);
+      setProviders([]);
+      setFilteredProviders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchProviders();
@@ -52,134 +158,64 @@ const SolutionProvidersScreen = () => {
     filterProviders();
   }, [searchQuery, selectedLocation, providers]);
 
-  const fetchProviders = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('https://stg-api.abilitynetwork.in/api/services/search');
-      
-      // Check if the response is successful
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data: ApiResponse = await response.json();
-      
-      // Debug: log the API response to see its structure
-      console.log('API Response:', JSON.stringify(data, null, 2));
-      
-      // Check if providers exists and is an array
-      if (!data.providers || !Array.isArray(data.providers)) {
-        console.error('Unexpected API response structure:', data);
-        setProviders([]);
-        setTotalProviders(0);
-        return;
-      }
-      
-      // Transform API data to match our ServiceProvider interface
-      const providersData: ServiceProvider[] = data.providers.map((item: any) => ({
-        id: item.id,
-        name: item.organization_name,
-        type: item.organization_type,
-        location: `${item.city}, ${item.state}`,
-        city: item.city,
-        state: item.state,
-        services: item.services ? item.services.map((service: any) => ({
-          id: service.id,
-          name: service.name,
-          category: service.category
-        })) : [],
-        about: item.description || 'No description available',
-        contact_info: item.contact_info || {}
-      }));
-      
-      setProviders(providersData);
-      setTotalProviders(providersData.length);
-      
-      // Extract unique states and cities
-      const uniqueStates = Array.from(new Set(providersData.map(p => p.state))).filter(Boolean);
-      setStates(uniqueStates);
-      
-    } catch (error) {
-      console.error('Error fetching providers:', error);
-      // Set empty arrays to prevent further errors
-      setProviders([]);
-      setTotalProviders(0);
-    } finally {
-      setLoading(false);
+  const filterProviders = () => {
+    let filtered = providers;
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(provider =>
+        provider.name.toLowerCase().includes(query) ||
+        provider.services.some(service => service.name.toLowerCase().includes(query))
+      );
     }
+
+    if (selectedLocation) {
+      filtered = filtered.filter(provider => provider.location === selectedLocation);
+    }
+
+    setFilteredProviders(filtered);
   };
 
   const handleStateSelect = (state: string) => {
     setSelectedState(state);
-    // Extract cities for the selected state
-    const stateCities = Array.from(
-      new Set(providers.filter(p => p.state === state).map(p => p.city))
-    ).filter(Boolean);
+    const stateCities = [...new Set(providers.filter(p => p.state === state).map(p => p.city))].filter(Boolean);
     setCities(stateCities);
   };
 
   const handleCitySelect = (city: string) => {
     if (selectedState) {
-      const location = `${city}, ${selectedState}`;
-      setSelectedLocation(location);
+      setSelectedLocation(`${city}, ${selectedState}`);
       setShowLocationModal(false);
-      setSelectedState(null); // Reset state selection
+      setSelectedState(null);
     }
-  };
-
-  const filterProviders = () => {
-    let filtered = providers;
-    
-    // Filter by search query
-    if (searchQuery) {
-      filtered = filtered.filter(provider => 
-        provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        provider.services.some(service => 
-          service.name.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      );
-    }
-    
-    // Filter by location
-    if (selectedLocation) {
-      filtered = filtered.filter(provider => 
-        provider.location === selectedLocation
-      );
-    }
-    
-    setFilteredProviders(filtered);
   };
 
   const renderServiceTag = (service: Service) => (
     <View key={service.id} style={styles.serviceTag}>
-      <Text style={styles.serviceTagText}>{service.name}</Text>
+      <Text style={styles.serviceTag}>{service.name}</Text>
     </View>
   );
 
-  const renderProviderCard = ({ item }: { item: ServiceProvider }) => (
-    <View style={styles.providerCard}>
-      <View style={styles.providerHeader}>
-        <Text style={styles.providerName}>{item.name}</Text>
-        <Text style={styles.providerType}>{item.type}</Text>
+  const renderProviderCard = ({ item }: { item: SolutionProvider }) => (
+    <View style={styles.cardContainer}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardOrgName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
+        <View style={styles.cardLocationRow}>
+          <Icon name="location-on" size={15} color="#a085ff" />
+          <Text style={styles.cardLocation}>{item.location}</Text>
+        </View>
       </View>
-      
-      <View style={styles.locationContainer}>
-        <Icon name="location-on" size={16} color="#666" />
-        <Text style={styles.locationText}>{item.location}</Text>
+
+      <View style={styles.cardTagsRow}>
+        {item.services.map(renderServiceTag)}
       </View>
-      
-      <Text style={styles.servicesLabel}>Services:</Text>
-      <View style={styles.servicesContainer}>
-        {item.services.slice(0, 3).map(renderServiceTag)}
-        {item.services.length > 3 && (
-          <View style={styles.moreServicesTag}>
-            <Text style={styles.moreServicesText}>+{item.services.length - 3} more</Text>
-          </View>
-        )}
-      </View>
-      
-      <TouchableOpacity 
-        style={styles.viewDetailsButton}
+
+      <Text style={styles.cardAbout} numberOfLines={3} ellipsizeMode="tail">
+        {item.about}
+      </Text>
+
+      <TouchableOpacity
+        style={styles.viewDetailsBtn}
         onPress={() => navigation.navigate('ProviderDetails', { provider: item })}
       >
         <Text style={styles.viewDetailsText}>View Details</Text>
@@ -190,57 +226,48 @@ const SolutionProvidersScreen = () => {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#0066b3" />
+        <ActivityIndicator size="large" color="#7c60e4" />
         <Text style={styles.loadingText}>Loading providers...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Image 
-          source={require('../assets/images/logo.png')} 
-          style={styles.logo}
-        />
-        <Text style={styles.headerTitle}>THE ABILITY NETWORK</Text>
-      </View>
-      
-      <Text style={styles.headline}>Find Organisations and People who care about making a difference</Text>
-      <Text style={styles.subtitle}>DISCOVER - CONNECT - DIGNIFY</Text>
-      
-      <View style={styles.filterContainer}>
-        <TouchableOpacity 
-          style={styles.locationSelector}
-          onPress={() => setShowLocationModal(true)}
-        >
-          <Text style={selectedLocation ? styles.locationSelectedText : styles.locationPlaceholder}>
-            {selectedLocation || 'Choose Location...'}
-          </Text>
-          <Icon name="arrow-drop-down" size={24} color="#666" />
-        </TouchableOpacity>
-        
-        <View style={styles.searchContainer}>
-          <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search for services or Locations..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+    <View style={styles.screenBackground}>
+      <View style={styles.headerSection}>
+        <Image source={require('../assets/images/logo.png')} style={styles.logo} />
+        <Text style={styles.title}>Find Organisations and People who care about making a difference</Text>
+        <Text style={styles.subtitle}>DISCOVER · CONNECT · DIGNIFY</Text>
+
+        <View style={styles.searchRow}>
+          <TouchableOpacity
+            style={styles.locationSelector}
+            onPress={() => setShowLocationModal(true)}
+          >
+            <Text style={selectedLocation ? styles.locationSelectedText : styles.locationPlaceholder}>
+              {selectedLocation || 'Choose Location...'}
+            </Text>
+            <Icon name="arrow-drop-down" size={24} color="#666" />
+          </TouchableOpacity>
+
+          <View style={styles.searchContainer}>
+            <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search for services or locations..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCorrect={false}
+            />
+          </View>
         </View>
       </View>
-      
-      <Text style={styles.noteText}>
-        Please note: that for now, we are only displaying solution providers for Bengaluru & Telangana, 
-        and we will open up the solution for other Locations gradually in a few months from now.
-      </Text>
-      
-      <View style={styles.resultsHeader}>
-        <Text style={styles.sectionTitle}>Solution Providers</Text>
-        <Text style={styles.resultsCount}>{filteredProviders.length} providers found</Text>
+
+      <View style={styles.providersHeader}>
+        <Text style={styles.providersTitle}>Solution Providers</Text>
+        <Text style={styles.providersCount}>{filteredProviders.length} providers found</Text>
       </View>
-      
+
       {filteredProviders.length === 0 ? (
         <View style={styles.centerContainer}>
           <Text style={styles.noResultsText}>No providers found matching your criteria.</Text>
@@ -249,15 +276,15 @@ const SolutionProvidersScreen = () => {
         <FlatList
           data={filteredProviders}
           renderItem={renderProviderCard}
-          keyExtractor={item => item.id.toString()}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listSpacing}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
         />
       )}
-      
+
       <Modal
         visible={showLocationModal}
-        transparent={true}
+        transparent
         animationType="slide"
         onRequestClose={() => {
           setShowLocationModal(false);
@@ -277,12 +304,11 @@ const SolutionProvidersScreen = () => {
                   setShowLocationModal(false);
                 }
               }}>
-                <Icon name={selectedState ? "arrow-back" : "close"} size={24} color="#333" />
+                <Icon name={selectedState ? 'arrow-back' : 'close'} size={24} color="#333" />
               </TouchableOpacity>
             </View>
-            
+
             {selectedState ? (
-              // Show cities for the selected state
               <FlatList
                 data={cities}
                 keyExtractor={(item, index) => index.toString()}
@@ -299,7 +325,6 @@ const SolutionProvidersScreen = () => {
                 }
               />
             ) : (
-              // Show states
               <FlatList
                 data={states}
                 keyExtractor={(item, index) => index.toString()}
@@ -325,179 +350,165 @@ const SolutionProvidersScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  screenBackground: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: '#f4f1fb',
+    paddingHorizontal: 12,
   },
   logo: {
     width: 50,
     height: 50,
-    marginRight: 10,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0066b3',
-  },
-  headline: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
     marginBottom: 8,
-    color: '#333',
+  },
+  headerSection: {
+    alignItems: 'center',
+    marginVertical: 14,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#7c60e4',
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-    color: '#0066b3',
+    fontSize: 14,
+    color: '#5a7fa4',
+    marginTop: 4,
     fontWeight: '500',
+    letterSpacing: 0.6,
   },
-  filterContainer: {
-    marginBottom: 16,
+  searchRow: {
+    flexDirection: 'row',
+    marginTop: 16,
+    width: '100%',
+    justifyContent: 'space-between',
   },
   locationSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
+    backgroundColor: '#fff',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#ddd',
+    flex: 1,
+    marginRight: 12,
+    justifyContent: 'space-between',
   },
   locationPlaceholder: {
     color: '#999',
+    fontSize: 14,
   },
   locationSelectedText: {
     color: '#333',
+    fontSize: 14,
   },
   searchContainer: {
+    flex: 2,
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    backgroundColor: '#fff',
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#ddd',
+    paddingHorizontal: 14,
+    alignItems: 'center',
   },
   searchIcon: {
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 12,
+    fontSize: 14,
+    paddingVertical: 10,
   },
-  noteText: {
-    fontSize: 12,
-    color: '#666',
-    fontStyle: 'italic',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  resultsHeader: {
+  providersHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    marginVertical: 14,
   },
-  sectionTitle: {
+  providersTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: '#321d6d',
   },
-  resultsCount: {
-    color: '#666',
+  providersCount: {
+    color: '#888',
+    fontSize: 14,
+    alignSelf: 'center',
   },
-  listContainer: {
-    paddingBottom: 20,
+  listSpacing: {
+    paddingBottom: 80,
   },
-  providerCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+  cardContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    marginBottom: 14,
+    padding: 18,
+    shadowColor: '#a085ff',
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
+    borderWidth: 0.7,
+    borderColor: '#eee',
+    elevation: 4,
   },
-  providerHeader: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 6,
+    alignItems: 'center',
   },
-  providerName: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  cardOrgName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#321d6d',
     flex: 1,
-    color: '#333',
+    paddingRight: 6,
   },
-  providerType: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
-  },
-  locationContainer: {
+  cardLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  locationText: {
+  cardLocation: {
     marginLeft: 4,
-    color: '#666',
-    fontSize: 14,
+    color: '#a085ff',
+    fontSize: 13,
+    fontWeight: '600',
   },
-  servicesLabel: {
-    fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#333',
-  },
-  servicesContainer: {
+  cardTagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 16,
+    marginVertical: 8,
   },
   serviceTag: {
-    backgroundColor: '#e6f7ff',
+    backgroundColor: '#f4edff',
+    color: '#7c60e4',
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
     marginRight: 8,
-    marginBottom: 8,
+    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: '600',
   },
-  serviceTagText: {
-    color: '#0066b3',
-    fontSize: 12,
+  cardAbout: {
+    color: '#5a7fa4',
+    fontSize: 13,
+    marginBottom: 10,
+    fontStyle: 'italic',
   },
-  moreServicesTag: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  moreServicesText: {
-    color: '#666',
-    fontSize: 12,
-  },
-  viewDetailsButton: {
-    backgroundColor: '#0066b3',
-    paddingVertical: 10,
-    borderRadius: 8,
+  viewDetailsBtn: {
+    backgroundColor: '#7c60e4',
+    borderRadius: 12,
     alignItems: 'center',
+    paddingVertical: 12,
   },
   viewDetailsText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+    letterSpacing: 0.7,
   },
   centerContainer: {
     flex: 1,
@@ -506,23 +517,25 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   loadingText: {
-    marginTop: 12,
-    color: '#666',
+    marginTop: 14,
+    color: '#7c60e4',
+    fontWeight: '600',
   },
   noResultsText: {
     fontSize: 16,
-    color: '#666',
+    color: '#888',
     textAlign: 'center',
+    fontWeight: '500',
   },
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 12,
+    backgroundColor: '#fff',
+    borderRadius: 14,
     width: width * 0.8,
     maxHeight: '60%',
   },
@@ -536,8 +549,8 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: '#321d6d',
   },
   locationItem: {
     flexDirection: 'row',
@@ -549,12 +562,12 @@ const styles = StyleSheet.create({
   },
   locationItemText: {
     fontSize: 16,
-    color: '#333',
+    color: '#321d6d',
   },
   noLocationsText: {
-    padding: 16,
+    padding: 18,
     textAlign: 'center',
-    color: '#666',
+    color: '#888',
     fontStyle: 'italic',
   },
 });
