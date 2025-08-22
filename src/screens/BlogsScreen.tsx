@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { ScrollView, View, Text, Image, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 
 const BlogsScreen = () => {
   const blogs = [
@@ -8,22 +8,20 @@ const BlogsScreen = () => {
       title: 'From Silos to Solutions: Building India\'s Disability Ecosystem',
       date: 'June 27, 2025',
       excerpt: 'Sometimes the most profound realizations come not from grand newsletters, but from moments of honest reflection. For me, such a moment came when I realized how fragmented India\'s disability support ecosystem was...',
-      image: require('../assets/images/blog1.jpg')
+      image: require('../assets/images/blog1.jpg'),
+      link: ('https://www.linkedin.com/pulse/from-silos-solutions-building-indias-disability-support-chetan-kapoor-ivfgc/?trackingId=JFVb8lWSRA6AQNR0ap8EvQ%3D%3D'),
+      // params: { id: 1 }
     },
     {
       id: 2,
-      title: 'Breaking Barriers: Digital Accessibility in India',
+      title: 'A Call to Rewrite the Narrative on Disability',
       date: 'May 15, 2025',
-      excerpt: 'Digital accessibility isn\'t just a nice-to-have feature—it\'s a fundamental right. In this post, we explore how technology can bridge gaps and create inclusive experiences for PwDs...',
-      image: require('../assets/images/blog2.jpg')
+      excerpt: 'Chimamanda Ngozi Adichie warns us about the danger of a single story. How it creates stereotypes and "the problem with stereotypes is not that they are untrue, but..."',
+      image: require('../assets/images/blog2.jpg'),
+      link: ('https://www.linkedin.com/pulse/call-rewrite-narrative-disability-sajid-ali-eoehc/?trackingId=lKt%2BZWRkRY60nRhGf3Yzpg%3D%3D'),
+      // params: { id:2 }
     },
-    {
-      id: 3,
-      title: 'Empowering Caregivers: The Unsung Heroes',
-      date: 'April 3, 2025',
-      excerpt: 'Caregivers play a crucial role in the lives of persons with disabilities, yet their needs are often overlooked. This article discusses support systems and resources available for caregivers...',
-      image: require('../assets/images/blog3.jpg')
-    }
+    
   ];
 
   return (
@@ -38,7 +36,9 @@ const BlogsScreen = () => {
             <Text style={styles.blogTitle}>{blog.title}</Text>
             <Text style={styles.blogDate}>{blog.date}</Text>
             <Text style={styles.blogExcerpt}>{blog.excerpt}</Text>
-            <TouchableOpacity style={styles.readMoreButton}>
+            <TouchableOpacity style={styles.readMoreButton}
+            onPress={()=> Linking.openURL(blog.link)}
+            >
               <Text style={styles.readMoreText}>Read More</Text>
               <Image 
                 source={require('../assets/icons/arrow-right.png')} 
