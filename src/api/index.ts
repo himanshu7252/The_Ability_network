@@ -10,7 +10,7 @@ export const fetchServices = async () => {
     return response.data;
   } catch (error: any) {
     console.error('API Error (fetchServices):', error?.message || error);
-    // Return empty array as a safe fallback so UI doesn't stay in loading state indefinitely
+   
     return [];
   }
 };

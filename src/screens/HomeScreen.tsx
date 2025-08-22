@@ -190,10 +190,11 @@ const HomeScreen = () => {
       <View style={styles.ctaContainer}>
         <Text style={styles.ctaTitle}>Transform Lives Together</Text>
         <Text style={styles.ctaText}>
-          The Ability Network offers a wide range of features and benefits that will revolutionize support for PwDs and their caregivers.
+          The Ability Network offers a wide range of features and benefits that will revolutionize support for PwDs and their caregivers.Join our mission to create meaningful change and ensure everyone has the opportunity to thrive.Join the Network
+
         </Text>
         <TouchableOpacity style={styles.joinButton}>
-          <Text style={styles.joinButtonText}>Join Our Mission</Text>
+          <Text style={styles.joinButtonText}>Join The Network</Text>
         </TouchableOpacity>
       </View>
 
@@ -694,6 +695,7 @@ const styles = StyleSheet.create({
   },
   category: {
     marginBottom: 28,
+    alignItems: 'center'
   },
   categoryTitle: {
     fontSize: 18,

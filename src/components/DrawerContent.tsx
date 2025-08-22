@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { DrawerContentScrollView } from '@react-navigation/drawer';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
-// Accept the full props object and forward it to DrawerContentScrollView
 const DrawerContent = (props: any) => {
   const { navigation } = props;
   const menuItems = [
@@ -50,7 +49,7 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     backgroundColor: '#0066b3',
-    borderBottomRightRadius: 15,
+    borderRadius: 15,
   },
   title: {
     fontSize: 22,

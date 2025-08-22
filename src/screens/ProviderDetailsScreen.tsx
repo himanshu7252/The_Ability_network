@@ -60,7 +60,7 @@ const ProviderDetailsScreen: React.FC<ProviderDetailsScreenProps> = ({ route }) 
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Image
-          source={require('../assets/images/logo.png')}
+          source={require('../assets/images/abilitynetworklogo.png')}
           style={styles.logo}
         />
         <Text style={styles.headerTitle}>Provider Details</Text>
@@ -130,12 +130,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  logo: { width: 40, height: 40, marginRight: 10 },
+  logo: {
+    width: 60,                  // Set your desired width
+    aspectRatio: 1,             // If your logo is square; change if not
+    marginRight: 10,
+    resizeMode: 'contain',
+},
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#0066b3' },
   profileSection: {
     backgroundColor: 'white',

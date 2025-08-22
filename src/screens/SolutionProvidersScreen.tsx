@@ -211,10 +211,6 @@ const SolutionProvidersScreen = () => {
         {item.services.map(renderServiceTag)}
       </View>
 
-      <Text style={styles.cardAbout} numberOfLines={3} ellipsizeMode="tail">
-        {item.about}
-      </Text>
-
       <TouchableOpacity
         style={styles.viewDetailsBtn}
         onPress={() => navigation.navigate('ProviderDetails', { provider: item })}
@@ -236,7 +232,7 @@ const SolutionProvidersScreen = () => {
   return (
     <ScrollView style={styles.screenBackground}>
       <View style={styles.headerSection}>
-        <Image source={require('../assets/images/logo.png')} style={styles.logo} />
+        <Image source={require('../assets/images/abilitynetworklogo.png')} style={styles.logo} />
         <Text style={styles.title}>Find Organisations and People who care about making a difference</Text>
         <Text style={styles.subtitle}>DISCOVER · CONNECT · DIGNIFY</Text>
 
@@ -255,7 +251,8 @@ const SolutionProvidersScreen = () => {
             <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search for services or locations..."
+              placeholder="Search for services or locations."
+              placeholderTextColor={'#999'}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCorrect={false}
@@ -353,17 +350,20 @@ const SolutionProvidersScreen = () => {
 const styles = StyleSheet.create({
   screenBackground: {
     flex: 1,
-    backgroundColor: '#f4f1fb',
+    backgroundColor: '#ffffffff',
     paddingHorizontal: 12,
   },
   logo: {
-    width: 50,
-    height: 50,
-    marginBottom: 8,
-  },
+  width: 100,          // Set only width or height, not both
+  height: 100,  // Let aspectRatio determine the height dynamically
+  aspectRatio: 1,     // Set this to your logo's width-to-height ratio (1 = square)
+  marginBottom: 4,
+  resizeMode: 'contain',
+}
+,
   headerSection: {
     alignItems: 'center',
-    marginVertical: 14,
+    marginVertical: 4,
   },
   title: {
     fontSize: 22,
@@ -395,7 +395,9 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     flex: 1,
     marginRight: 12,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    position: 'relative',
+    paddingRight: 30
   },
   locationPlaceholder: {
     color: '#999',

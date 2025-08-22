@@ -47,12 +47,12 @@ function SolutionProvidersStack() {
       <Stack.Screen 
         name="SolutionProvidersList" 
         component={SolutionProvidersScreen} 
-        options={{ title: 'Solution Providers' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen 
         name="ProviderDetails" 
         component={ProviderDetailsScreen} 
-        options={{ title: 'Provider Details' }}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
