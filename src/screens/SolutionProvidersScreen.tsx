@@ -10,11 +10,13 @@ import {
   Modal,
   Dimensions,
   Image,
+  ScrollView,
+  Keyboard,
 } from 'react-native';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { ScrollView } from 'react-native-gesture-handler';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 
+// --- Type Definitions ---
 type Contact = {
   category?: string;
   email?: string;
@@ -73,30 +75,37 @@ type RootStackParamList = {
 
 const { width } = Dimensions.get('window');
 
+const getServiceTags = (services: Service[], max = 2) => {
+  const display = services.slice(0, max);
+  const extra = Math.max(services.length - max, 0);
+  return { display, extra };
+};
+
 const SolutionProvidersScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [providers, setProviders] = useState<SolutionProvider[]>([]);
   const [filteredProviders, setFilteredProviders] = useState<SolutionProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [serviceSuggestions, setServiceSuggestions] = useState<string[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [states, setStates] = useState<string[]>([]);
   const [cities, setCities] = useState<string[]>([]);
   const [selectedState, setSelectedState] = useState<string | null>(null);
 
+  // Fetch providers and initialize state
   const fetchProviders = async () => {
     try {
       setLoading(true);
       const response = await fetch('https://stg-api.abilitynetwork.in/api/services/search');
       const data: ApiResponse = await response.json();
 
-      // Flatten and group by organization+city+state key
       const flatProviders = data.services.flatMap(serviceGroup =>
         serviceGroup.addresses.map(address => ({
           orgKey: `${address.organization_name}__${address.city}__${address.state}`,
           id: serviceGroup.id,
-          organization_name: address.organization_name,
+          name: address.organization_name,
           location: `${address.city}, ${address.state}`,
           city: address.city,
           state: address.state,
@@ -110,13 +119,12 @@ const SolutionProvidersScreen = () => {
         }))
       );
 
-      const groupedProvidersMap = new Map<string, SolutionProvider>();
-
+      const groupedMap = new Map<string, SolutionProvider>();
       flatProviders.forEach(item => {
-        if (!groupedProvidersMap.has(item.orgKey)) {
-          groupedProvidersMap.set(item.orgKey, {
+        if (!groupedMap.has(item.orgKey)) {
+          groupedMap.set(item.orgKey, {
             id: item.orgKey,
-            name: item.organization_name,
+            name: item.name,
             location: item.location,
             city: item.city,
             state: item.state,
@@ -125,21 +133,17 @@ const SolutionProvidersScreen = () => {
             contact_info: item.contact_info,
           });
         } else {
-          const existing = groupedProvidersMap.get(item.orgKey)!;
-          const serviceExists = existing.services.some(s => s.id === item.service.id);
-          if (!serviceExists) {
+          const existing = groupedMap.get(item.orgKey)!;
+          if (!existing.services.some(s => s.id === item.service.id)) {
             existing.services.push(item.service);
           }
         }
       });
 
-      const providersData = Array.from(groupedProvidersMap.values());
-
+      const providersData = Array.from(groupedMap.values());
       setProviders(providersData);
       setFilteredProviders(providersData);
-
-      const uniqueStates = [...new Set(providersData.map(p => p.state))].filter(Boolean) as string[];
-      setStates(uniqueStates);
+      setStates([...new Set(providersData.map(p => p.state))].filter(Boolean) as string[]);
     } catch (error) {
       console.error('Error fetching providers:', error);
       setProviders([]);
@@ -149,17 +153,25 @@ const SolutionProvidersScreen = () => {
     }
   };
 
+  // Generate service suggestions as user types
   useEffect(() => {
-    fetchProviders();
-  }, []);
+    if (searchQuery) {
+      const allServices = Array.from(
+        new Set(providers.flatMap(p => p.services.map(s => s.name)))
+      );
+      const query = searchQuery.toLowerCase();
+      const matches = allServices.filter(name => name.toLowerCase().includes(query));
+      setServiceSuggestions(matches);
+    } else {
+      setServiceSuggestions([]);
+    }
+  }, [searchQuery, providers]);
 
+  // ⭐ KEY CHANGE: Apply BOTH filters together - search AND location
   useEffect(() => {
-    filterProviders();
-  }, [searchQuery, selectedLocation, providers]);
-
-  const filterProviders = () => {
     let filtered = providers;
 
+    // Apply search filter if search query exists
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(provider =>
@@ -168,55 +180,72 @@ const SolutionProvidersScreen = () => {
       );
     }
 
+    // Apply location filter if location is selected
     if (selectedLocation) {
       filtered = filtered.filter(provider => provider.location === selectedLocation);
     }
 
     setFilteredProviders(filtered);
-  };
+  }, [searchQuery, selectedLocation, providers]);
+
+  useEffect(() => {
+    fetchProviders();
+  }, []);
 
   const handleStateSelect = (state: string) => {
     setSelectedState(state);
-    const stateCities = [...new Set(providers.filter(p => p.state === state).map(p => p.city))].filter(Boolean);
-    setCities(stateCities);
+    setCities([...new Set(providers.filter(p => p.state === state).map(p => p.city))].filter(Boolean));
   };
 
+  // ⭐ KEY CHANGE: When selecting a city, DON'T clear the search query
   const handleCitySelect = (city: string) => {
     if (selectedState) {
       setSelectedLocation(`${city}, ${selectedState}`);
+      // ⭐ REMOVED: setSearchQuery(''); - Keep search query when location is selected
       setShowLocationModal(false);
       setSelectedState(null);
     }
   };
 
+  // Function to clear location filter (show all locations)
+  const selectAllLocations = () => {
+    setSelectedLocation(null);
+    setShowLocationModal(false);
+    setSelectedState(null);
+  };
+
   const renderServiceTag = (service: Service) => (
     <View key={service.id} style={styles.serviceTag}>
-      <Text style={styles.serviceTag}>{service.name}</Text>
+      <Text style={styles.serviceTagText}>{service.name}</Text>
     </View>
   );
 
-  const renderProviderCard = ({ item }: { item: SolutionProvider }) => (
-    <View style={styles.cardContainer}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardOrgName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
+  const renderProviderCard = ({ item }: { item: SolutionProvider }) => {
+    const { display, extra } = getServiceTags(item.services);
+    return (
+      <View style={styles.cardContainer}>
+        <Text style={styles.cardOrgName} numberOfLines={2} ellipsizeMode="tail">{item.name}</Text>
         <View style={styles.cardLocationRow}>
           <Icon name="location-on" size={15} color="#a085ff" />
           <Text style={styles.cardLocation}>{item.location}</Text>
         </View>
+        <View style={styles.cardTagsRow}>
+          {display.map(renderServiceTag)}
+          {extra > 0 && (
+            <View style={styles.serviceTag}>
+              <Text style={styles.serviceTagText}>+{extra}</Text>
+            </View>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.viewDetailsBtn}
+          onPress={() => navigation.navigate('ProviderDetails', { provider: item })}
+        >
+          <Text style={styles.viewDetailsText}>View Details</Text>
+        </TouchableOpacity>
       </View>
-
-      <View style={styles.cardTagsRow}>
-        {item.services.map(renderServiceTag)}
-      </View>
-
-      <TouchableOpacity
-        style={styles.viewDetailsBtn}
-        onPress={() => navigation.navigate('ProviderDetails', { provider: item })}
-      >
-        <Text style={styles.viewDetailsText}>View Details</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -233,28 +262,51 @@ const SolutionProvidersScreen = () => {
         <Image source={require('../assets/images/abilitynetworklogo.png')} style={styles.logo} />
         <Text style={styles.title}>Find Organisations and People who care about making a difference</Text>
         <Text style={styles.subtitle}>DISCOVER · CONNECT · DIGNIFY</Text>
-
+        
         <View style={styles.searchRow}>
+          {/* ⭐ KEY CHANGE: Location selector always shows selected location */}
           <TouchableOpacity
             style={styles.locationSelector}
             onPress={() => setShowLocationModal(true)}
           >
             <Text style={selectedLocation ? styles.locationSelectedText : styles.locationPlaceholder}>
-              {selectedLocation || 'Choose Location...'}
+              {selectedLocation || 'Choose Location'}
             </Text>
             <Icon name="arrow-drop-down" size={24} color="#666" />
           </TouchableOpacity>
 
+          {/* Service search with scrollable suggestions */}
           <View style={styles.searchContainer}>
             <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search for services or locations."
-              placeholderTextColor={'#999'}
+              placeholder="Search for services"
+              placeholderTextColor="#999"
               value={searchQuery}
-              onChangeText={setSearchQuery}
+              onChangeText={setSearchQuery} // ⭐ REMOVED: location clearing logic
               autoCorrect={false}
             />
+            {serviceSuggestions.length > 0 && (
+              <FlatList
+                nestedScrollEnabled
+                style={styles.suggestionList}
+                data={serviceSuggestions}
+                keyExtractor={(_, idx) => idx.toString()}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.suggestionItem}
+                    onPress={() => {
+                      setSearchQuery(item);
+                      setServiceSuggestions([]);
+                      Keyboard.dismiss();
+                    }}
+                  >
+                    <Text style={styles.suggestionText}>{item}</Text>
+                  </TouchableOpacity>
+                )}
+                keyboardShouldPersistTaps="always"
+              />
+            )}
           </View>
         </View>
       </View>
@@ -272,12 +324,13 @@ const SolutionProvidersScreen = () => {
         <FlatList
           data={filteredProviders}
           renderItem={renderProviderCard}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           contentContainerStyle={styles.listSpacing}
           showsVerticalScrollIndicator={false}
         />
       )}
 
+      {/* Location selection modal */}
       <Modal
         visible={showLocationModal}
         transparent
@@ -291,7 +344,7 @@ const SolutionProvidersScreen = () => {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {selectedState ? `Cities in ${selectedState}` : 'Select State'}
+                {selectedState ? `Cities in ${selectedState}` : 'Select Location'}
               </Text>
               <TouchableOpacity onPress={() => {
                 if (selectedState) {
@@ -303,11 +356,11 @@ const SolutionProvidersScreen = () => {
                 <Icon name={selectedState ? 'arrow-back' : 'close'} size={24} color="#333" />
               </TouchableOpacity>
             </View>
-
             {selectedState ? (
               <FlatList
                 data={cities}
-                keyExtractor={(item, index) => index.toString()}
+  
+                keyExtractor={(_, idx) => idx.toString()}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={styles.locationItem}
@@ -323,7 +376,18 @@ const SolutionProvidersScreen = () => {
             ) : (
               <FlatList
                 data={states}
-                keyExtractor={(item, index) => index.toString()}
+                ListHeaderComponent={() => (
+                  <TouchableOpacity
+                    style={[styles.locationItem, styles.selectLocationItem]}
+                    onPress={selectAllLocations}
+                  >
+                    <Text style={[styles.locationItemText, styles.selectLocationText]}>
+                      Select Location
+                    </Text>
+                    <Text style={styles.selectLocationSubText}>Show all locations</Text>
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(_, idx) => idx.toString()}
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={styles.locationItem}
@@ -352,13 +416,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   logo: {
-  width: 100,         
-  height: 100, 
-  aspectRatio: 1,     
-  marginBottom: 4,
-  resizeMode: 'contain',
-}
-,
+    width: 100,
+    height: 100,
+    aspectRatio: 1,
+    marginBottom: 4,
+    resizeMode: 'contain',
+  },
   headerSection: {
     alignItems: 'center',
     marginVertical: 4,
@@ -395,7 +458,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     justifyContent: 'flex-start',
     position: 'relative',
-    paddingRight: 30
+    paddingRight: 30,
   },
   locationPlaceholder: {
     color: '#999',
@@ -404,6 +467,7 @@ const styles = StyleSheet.create({
   locationSelectedText: {
     color: '#333',
     fontSize: 14,
+    fontWeight: '500',
   },
   searchContainer: {
     flex: 2,
@@ -413,7 +477,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     paddingHorizontal: 14,
+    paddingVertical: 6,
     alignItems: 'center',
+    position: 'relative',
   },
   searchIcon: {
     marginRight: 8,
@@ -421,7 +487,30 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    paddingVertical: 10,
+    paddingVertical: 4,
+  },
+  suggestionList: {
+    position: 'absolute',
+    top: 44,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    zIndex: 100,
+    elevation: 4,
+    maxHeight: 200,
+    width: '100%',
+  },
+  suggestionItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: '#333',
   },
   providersHeader: {
     flexDirection: 'row',
@@ -454,22 +543,16 @@ const styles = StyleSheet.create({
     borderColor: '#eee',
     elevation: 4,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-    alignItems: 'center',
-  },
   cardOrgName: {
     fontSize: 17,
     fontWeight: '700',
     color: '#321d6d',
-    flex: 1,
-    paddingRight: 6,
+    marginBottom: 4,
   },
   cardLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
   },
   cardLocation: {
     marginLeft: 4,
@@ -480,30 +563,28 @@ const styles = StyleSheet.create({
   cardTagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginVertical: 8,
+    marginBottom: 10,
   },
   serviceTag: {
     backgroundColor: '#f4edff',
-    color: '#7c60e4',
-    borderRadius: 10,
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
     marginRight: 8,
-    marginBottom: 6,
+    marginBottom: 8,
+    alignSelf: 'flex-start',
+  },
+  serviceTagText: {
+    color: '#7c60e4',
     fontSize: 13,
     fontWeight: '600',
-  },
-  cardAbout: {
-    color: '#5a7fa4',
-    fontSize: 13,
-    marginBottom: 10,
-    fontStyle: 'italic',
   },
   viewDetailsBtn: {
     backgroundColor: '#7c60e4',
     borderRadius: 12,
     alignItems: 'center',
     paddingVertical: 12,
+    marginTop: 8,
   },
   viewDetailsText: {
     color: '#fff',
@@ -564,6 +645,18 @@ const styles = StyleSheet.create({
   locationItemText: {
     fontSize: 16,
     color: '#321d6d',
+  },
+  selectLocationItem: {
+    backgroundColor: '#f8f9fa',
+  },
+  selectLocationText: {
+    fontWeight: '700',
+    color: '#7c60e4',
+  },
+  selectLocationSubText: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
   },
   noLocationsText: {
     padding: 18,
