@@ -382,9 +382,9 @@ const SolutionProvidersScreen = () => {
                     onPress={selectAllLocations}
                   >
                     <Text style={[styles.locationItemText, styles.selectLocationText]}>
-                      Select Location
+                      All Locations
                     </Text>
-                    <Text style={styles.selectLocationSubText}>Show all locations</Text>
+                    
                   </TouchableOpacity>
                 )}
                 keyExtractor={(_, idx) => idx.toString()}
