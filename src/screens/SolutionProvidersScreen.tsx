@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+// SolutionProvidersScreen.tsx
+
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,26 +14,20 @@ import {
   Image,
   ScrollView,
   Keyboard,
-  Animated,
-  Platform,
-  StatusBar,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 
-const { width } = Dimensions.get('window');
-
 // --- Type Definitions ---
-interface Contact {
+type Contact = {
   category?: string;
   email?: string;
   first_name?: string;
   last_name?: string;
   phone?: string;
-}
+};
 
-interface Address {
+type Address = {
   address_label?: string;
   address_line_1: string;
   address_line_2?: string | null;
@@ -40,15 +36,15 @@ interface Address {
   organization_name: string;
   pincode: number;
   state: string;
-}
+};
 
-interface Service {
+type Service = {
   id: string;
   name: string;
   category?: string;
-}
+};
 
-interface SolutionProvider {
+type SolutionProvider = {
   id: string;
   name: string;
   location: string;
@@ -57,9 +53,9 @@ interface SolutionProvider {
   services: Service[];
   about: string;
   contact_info: Contact[];
-}
+};
 
-interface ApiResponse {
+type ApiResponse = {
   services: Array<{
     id: string;
     organization_names: string[];
@@ -72,12 +68,14 @@ interface ApiResponse {
   }>;
   total: number;
   filtered_response: boolean;
-}
+};
 
 type RootStackParamList = {
   SolutionProvidersList: undefined;
   ProviderDetails: { provider: SolutionProvider };
 };
+
+const { width } = Dimensions.get('window');
 
 const getServiceTags = (services: Service[], max = 2) => {
   const display = services.slice(0, max);
@@ -85,10 +83,32 @@ const getServiceTags = (services: Service[], max = 2) => {
   return { display, extra };
 };
 
-const SolutionProvidersScreen: React.FC = () => {
+const TEST_STATES = [
+  'Andhra Pradesh',
+  'Delhi',
+  'Gujarat',
+  'Karnataka',
+  'Maharashtra',
+  'Punjab',
+  'Tamil Nadu',
+  'Uttar Pradesh',
+  'West Bengal',
+];
+
+const TEST_CITIES: Record<string, string[]> = {
+  'Delhi': ['New Delhi', 'Central Delhi', 'South Delhi', 'North Delhi'],
+  'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Nashik', 'Aurangabad'],
+  'Karnataka': ['Bangalore', 'Mysore', 'Hubli', 'Mangalore'],
+  'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Salem'],
+  'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot'],
+  'Andhra Pradesh': ['Hyderabad', 'Visakhapatnam', 'Vijayawada'],
+  'Punjab': ['Chandigarh', 'Ludhiana', 'Amritsar'],
+  'Uttar Pradesh': ['Lucknow', 'Kanpur', 'Agra', 'Varanasi'],
+  'West Bengal': ['Kolkata', 'Siliguri', 'Durgapur'],
+};
+
+const SolutionProvidersScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  
-  // All state hooks at the top level
   const [providers, setProviders] = useState<SolutionProvider[]>([]);
   const [filteredProviders, setFilteredProviders] = useState<SolutionProvider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,80 +120,28 @@ const SolutionProvidersScreen: React.FC = () => {
   const [cities, setCities] = useState<string[]>([]);
   const [selectedState, setSelectedState] = useState<string | null>(null);
 
-  // All ref hooks at the top level
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const searchBarAnim = useRef(new Animated.Value(0)).current;
-
-  // All effect hooks at the top level
-  useEffect(() => {
-    // Initial animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(searchBarAnim, {
-        toValue: 1,
-        duration: 700,
-        delay: 200,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    fetchProviders();
-  }, [fadeAnim, slideAnim, searchBarAnim]);
-
-  // Generate service suggestions as user types
-  useEffect(() => {
-    if (searchQuery) {
-      const allServices = Array.from(
-        new Set(providers.flatMap(p => p.services.map(s => s.name)))
-      );
-      const query = searchQuery.toLowerCase();
-      const matches = allServices.filter(name => name.toLowerCase().includes(query));
-      setServiceSuggestions(matches);
-    } else {
-      setServiceSuggestions([]);
-    }
-  }, [searchQuery, providers]);
-
-  // Apply BOTH filters together - search AND location
-  useEffect(() => {
-    let filtered = providers;
-
-    // Apply search filter if search query exists
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(provider =>
-        provider.name.toLowerCase().includes(query) ||
-        provider.services.some(service => service.name.toLowerCase().includes(query))
-      );
-    }
-
-    // Apply location filter if location is selected
-    if (selectedLocation) {
-      filtered = filtered.filter(provider => provider.location === selectedLocation);
-    }
-
-    setFilteredProviders(filtered);
-  }, [searchQuery, selectedLocation, providers]);
-
-  // Fetch providers function
+  // Fetch providers and initialize state
   const fetchProviders = async () => {
     try {
       setLoading(true);
       const response = await fetch('https://stg-api.abilitynetwork.in/api/services/search');
       const data: ApiResponse = await response.json();
 
+      // If you want to use API states uncomment this
+      // const allAddresses = data.services.flatMap(serviceGroup => serviceGroup.addresses || []);
+      // const realStates = [...new Set(
+      //   allAddresses
+      //     .map(addr => addr.state)
+      //     .filter(state => state && typeof state === 'string' && state.trim() !== '')
+      // )];
+      // setStates(realStates.length > 0 ? realStates : TEST_STATES);
+
+      // For now, force Indian states
+      setStates(TEST_STATES);
+
+      // Process providers as usual
       const flatProviders = data.services.flatMap(serviceGroup =>
-        serviceGroup.addresses.map(address => ({
+        (serviceGroup.addresses || []).map(address => ({
           orgKey: `${address.organization_name}__${address.city}__${address.state}`,
           id: serviceGroup.id,
           name: address.organization_name,
@@ -186,7 +154,7 @@ const SolutionProvidersScreen: React.FC = () => {
             category: 'Service',
           },
           about: serviceGroup.service_description,
-          contact_info: address.contacts,
+          contact_info: address.contacts || [],
         }))
       );
 
@@ -214,19 +182,56 @@ const SolutionProvidersScreen: React.FC = () => {
       const providersData = Array.from(groupedMap.values());
       setProviders(providersData);
       setFilteredProviders(providersData);
-      setStates([...new Set(providersData.map(p => p.state))].filter(Boolean) as string[]);
     } catch (error) {
       console.error('Error fetching providers:', error);
       setProviders([]);
       setFilteredProviders([]);
+      setStates(TEST_STATES); // Fallback on error
     } finally {
       setLoading(false);
     }
   };
 
+  // Generate service suggestions as user types
+  useEffect(() => {
+    if (searchQuery) {
+      const allServices = Array.from(
+        new Set(providers.flatMap(p => p.services.map(s => s.name)))
+      );
+      const query = searchQuery.toLowerCase();
+      const matches = allServices.filter(name => name.toLowerCase().includes(query));
+      setServiceSuggestions(matches);
+    } else {
+      setServiceSuggestions([]);
+    }
+  }, [searchQuery, providers]);
+
+  // Apply BOTH filters together - search AND location
+  useEffect(() => {
+    let filtered = providers;
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(provider =>
+        provider.name.toLowerCase().includes(query) ||
+        provider.services.some(service => service.name.toLowerCase().includes(query))
+      );
+    }
+
+    if (selectedLocation) {
+      filtered = filtered.filter(provider => provider.location === selectedLocation);
+    }
+
+    setFilteredProviders(filtered);
+  }, [searchQuery, selectedLocation, providers]);
+
+  useEffect(() => {
+    fetchProviders();
+  }, []);
+
   const handleStateSelect = (state: string) => {
     setSelectedState(state);
-    setCities([...new Set(providers.filter(p => p.state === state).map(p => p.city))].filter(Boolean));
+    setCities(TEST_CITIES[state] || ['City 1', 'City 2', 'City 3']);
   };
 
   const handleCitySelect = (city: string) => {
@@ -243,242 +248,129 @@ const SolutionProvidersScreen: React.FC = () => {
     setSelectedState(null);
   };
 
-  // Service Tag Component
-  const ServiceTag: React.FC<{ service: Service }> = ({ service }) => (
-    <View style={styles.serviceTag}>
+  const renderServiceTag = (service: Service) => (
+    <View key={service.id} style={styles.serviceTag}>
       <Text style={styles.serviceTagText}>{service.name}</Text>
     </View>
   );
 
-  // Provider Card Component
-  const ProviderCard: React.FC<{ item: SolutionProvider; index: number }> = ({ item, index }) => {
+  const renderProviderCard = ({ item }: { item: SolutionProvider }) => {
     const { display, extra } = getServiceTags(item.services);
-    const cardAnim = useRef(new Animated.Value(0)).current;
-    const scaleAnim = useRef(new Animated.Value(0.95)).current;
-
-    useEffect(() => {
-      Animated.parallel([
-        Animated.timing(cardAnim, {
-          toValue: 1,
-          duration: 500,
-          delay: index * 100,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          delay: index * 100,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }, [index, cardAnim, scaleAnim]);
 
     return (
-      <Animated.View
-        style={[
-          styles.cardContainer,
-          {
-            opacity: cardAnim,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}
-      >
-        <LinearGradient
-          colors={['#fff', '#f8fafc']}
-          style={styles.cardGradient}
-        >
-          <View style={styles.cardHeader}>
-            <View style={styles.organizationInfo}>
-              <Text style={styles.cardOrgName}>{item.name}</Text>
-              <View style={styles.cardLocationRow}>
-                <Icon name="location-on" size={16} color="#0ea5e9" />
-                <Text style={styles.cardLocation}>{item.location}</Text>
-              </View>
+      <View style={styles.cardContainer}>
+        <Text style={styles.cardOrgName}>{item.name}</Text>
+        <View style={styles.cardLocationRow}>
+          <Icon name="location-on" size={16} color="#a085ff" />
+          <Text style={styles.cardLocation}>{item.location}</Text>
+        </View>
+
+        <View style={styles.cardTagsRow}>
+          {display.map(renderServiceTag)}
+          {extra > 0 && (
+            <View style={styles.serviceTag}>
+              <Text style={styles.serviceTagText}>+{extra}</Text>
             </View>
-            <TouchableOpacity style={styles.favoriteButton}>
-              <Icon name="favorite-border" size={20} color="#d946ef" />
-            </TouchableOpacity>
-          </View>
+          )}
+        </View>
 
-          <View style={styles.cardTagsRow}>
-            {display.map(service => (
-              <ServiceTag key={service.id} service={service} />
-            ))}
-            {extra > 0 && (
-              <View style={[styles.serviceTag, styles.extraTag]}>
-                <Text style={styles.extraTagText}>+{extra}</Text>
-              </View>
-            )}
-          </View>
-
-          <TouchableOpacity
-            style={styles.viewDetailsBtn}
-            onPress={() => navigation.navigate('ProviderDetails', { provider: item })}
-          >
-            <LinearGradient
-              colors={['#0ea5e9', '#0284c7']}
-              style={styles.viewDetailsBtnGradient}
-            >
-              <Text style={styles.viewDetailsText}>View Details</Text>
-              <Icon name="arrow-forward" size={16} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
-        </LinearGradient>
-      </Animated.View>
+        <TouchableOpacity
+          style={styles.viewDetailsBtn}
+          onPress={() => navigation.navigate('ProviderDetails', { provider: item })}
+        >
+          <Text style={styles.viewDetailsText}>View Details</Text>
+        </TouchableOpacity>
+      </View>
     );
   };
 
-  // Loading Animation Component
-  const LoadingAnimation: React.FC = () => (
-    <View style={styles.centerContainer}>
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0ea5e9" />
-        <Text style={styles.loadingText}>Finding amazing providers...</Text>
-      </View>
-    </View>
-  );
-
-  // Main render
   if (loading) {
     return (
-      <View style={[styles.screenBackground, { justifyContent: 'center' }]}>
-        <StatusBar barStyle="light-content" backgroundColor="#0ea5e9" />
-        <LoadingAnimation />
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#7c60e4" />
+        <Text style={styles.loadingText}>Loading providers...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.screenBackground}>
-      <StatusBar barStyle="light-content" backgroundColor="#0ea5e9" />
-      
-      {/* Header */}
-      <LinearGradient
-        colors={['#0ea5e9', '#0284c7']}
-        style={styles.header}
-      >
-        <Animated.View
-          style={[
-            styles.headerContent,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
+    <ScrollView style={styles.screenBackground}>
+      <View style={styles.headerSection}>
+        <Image source={require('../assets/images/logo.png')} style={styles.logo} />
+        <Text style={styles.title}>Find Organisations and People who care about making a difference</Text>
+        <Text style={styles.subtitle}>DISCOVER · CONNECT · DIGNIFY</Text>
+      </View>
+
+      <View style={styles.searchRow}>
+        <TouchableOpacity
+          style={styles.locationSelector}
+          onPress={() => setShowLocationModal(true)}
         >
-          <Image source={require('../assets/images/logo.png')} style={styles.logo} />
-          <Text style={styles.title}>Find Organizations and People who care about making a difference</Text>
-          <Text style={styles.subtitle}>DISCOVER · CONNECT · DIGNIFY</Text>
-        </Animated.View>
-      </LinearGradient>
-
-      {/* Search Section */}
-      <Animated.View
-        style={[
-          styles.searchSection,
-          { opacity: searchBarAnim }
-        ]}
-      >
-        <View style={styles.searchRow}>
-          {/* Location Selector */}
-          <TouchableOpacity
-            style={styles.locationSelector}
-            onPress={() => setShowLocationModal(true)}
+          <Icon name="location-on" size={20} color="#7c60e4" />
+          <Text
+            style={[
+              styles.locationText,
+              selectedLocation ? styles.locationSelectedText : styles.locationPlaceholder,
+            ]}
           >
-            <Icon name="location-on" size={20} color="#0ea5e9" />
-            <Text
-              style={[
-                styles.locationText,
-                selectedLocation ? styles.locationSelectedText : styles.locationPlaceholder,
-              ]}
-            >
-              {selectedLocation || 'Choose Location'}
-            </Text>
-            <Icon name="keyboard-arrow-down" size={20} color="#94a3b8" />
-          </TouchableOpacity>
+            {selectedLocation || 'Choose Location'}
+          </Text>
+          <Icon name="keyboard-arrow-down" size={20} color="#999" />
+        </TouchableOpacity>
 
-          {/* Service Search */}
-          <View style={styles.searchContainer}>
-            <Icon name="search" size={20} color="#64748b" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search services..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#94a3b8"
-            />
-            {searchQuery !== '' && (
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={() => setSearchQuery('')}
-              >
-                <Icon name="close" size={18} color="#94a3b8" />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        {/* Service Suggestions */}
-        {serviceSuggestions.length > 0 && (
-          <View style={styles.suggestionList}>
-            <FlatList
-              data={serviceSuggestions}
-              keyExtractor={(_, idx) => idx.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.suggestionItem}
-                  onPress={() => {
-                    setSearchQuery(item);
-                    setServiceSuggestions([]);
-                    Keyboard.dismiss();
-                  }}
-                >
-                  <Icon name="search" size={16} color="#64748b" />
-                  <Text style={styles.suggestionText}>{item}</Text>
-                </TouchableOpacity>
-              )}
-              keyboardShouldPersistTaps="always"
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        )}
-      </Animated.View>
-
-      {/* Results Header */}
-      <View style={styles.resultsHeader}>
-        <Text style={styles.resultsTitle}>Solution Providers</Text>
-        <View style={styles.resultsCount}>
-          <Text style={styles.resultsCountText}>{filteredProviders.length} found</Text>
+        <View style={styles.searchContainer}>
+          <Icon name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search services..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#999"
+          />
         </View>
       </View>
 
-      {/* Results List */}
+      {serviceSuggestions.length > 0 && (
+        <View style={styles.suggestionList}>
+          <FlatList
+            data={serviceSuggestions}
+            keyExtractor={(_, idx) => idx.toString()}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.suggestionItem}
+                onPress={() => {
+                  setSearchQuery(item);
+                  setServiceSuggestions([]);
+                  Keyboard.dismiss();
+                }}
+              >
+                <Text style={styles.suggestionText}>{item}</Text>
+              </TouchableOpacity>
+            )}
+            keyboardShouldPersistTaps="always"
+          />
+        </View>
+      )}
+
+      <View style={styles.providersHeader}>
+        <Text style={styles.providersTitle}>Solution Providers</Text>
+        <Text style={styles.providersCount}>{filteredProviders.length} providers found</Text>
+      </View>
+
       {filteredProviders.length === 0 ? (
         <View style={styles.centerContainer}>
-          <Icon name="search-off" size={64} color="#cbd5e1" />
-          <Text style={styles.noResultsText}>No providers found matching your criteria</Text>
-          <TouchableOpacity
-            style={styles.resetButton}
-            onPress={() => {
-              setSearchQuery('');
-              setSelectedLocation(null);
-            }}
-          >
-            <Text style={styles.resetButtonText}>Reset Filters</Text>
-          </TouchableOpacity>
+          <Text style={styles.noResultsText}>No providers found matching your criteria.</Text>
         </View>
       ) : (
         <FlatList
           data={filteredProviders}
-          renderItem={({ item, index }) => <ProviderCard item={item} index={index} />}
+          renderItem={renderProviderCard}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listSpacing}
           showsVerticalScrollIndicator={false}
         />
       )}
 
-      {/* Location Selection Modal */}
       <Modal
         visible={showLocationModal}
         animationType="slide"
@@ -503,28 +395,27 @@ const SolutionProvidersScreen: React.FC = () => {
                   }
                 }}
               >
-                <Icon name="close" size={24} color="#64748b" />
+                <Icon name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalScroll}>
               {selectedState ? (
-                <FlatList
-                  data={cities}
-                  keyExtractor={(_, idx) => idx.toString()}
-                  renderItem={({ item }) => (
+                <>
+                  {cities.map((city, index) => (
                     <TouchableOpacity
+                      key={`city-${city}-${index}`}
                       style={styles.locationItem}
-                      onPress={() => handleCitySelect(item)}
+                      onPress={() => handleCitySelect(city)}
                     >
-                      <Text style={styles.locationItemText}>{item}</Text>
-                      <Icon name="arrow-forward-ios" size={16} color="#94a3b8" />
+                      <Text style={styles.locationItemText}>{city}</Text>
+                      <Icon name="arrow-forward-ios" size={16} color="#999" />
                     </TouchableOpacity>
+                  ))}
+                  {cities.length === 0 && (
+                    <Text style={styles.noLocationsText}>No cities found</Text>
                   )}
-                  ListEmptyComponent={
-                    <Text style={styles.noLocationsText}>No cities found for this state</Text>
-                  }
-                />
+                </>
               ) : (
                 <>
                   <TouchableOpacity
@@ -535,98 +426,79 @@ const SolutionProvidersScreen: React.FC = () => {
                       <Text style={styles.selectLocationText}>All Locations</Text>
                       <Text style={styles.selectLocationSubText}>Show all providers</Text>
                     </View>
-                    <Icon name="public" size={20} color="#0ea5e9" />
+                    <Icon name="public" size={20} color="#7c60e4" />
                   </TouchableOpacity>
 
-                  <FlatList
-                    data={states}
-                    keyExtractor={(_, idx) => idx.toString()}
-                    renderItem={({ item }) => (
-                      <TouchableOpacity
-                        style={styles.locationItem}
-                        onPress={() => handleStateSelect(item)}
-                      >
-                        <Text style={styles.locationItemText}>{item}</Text>
-                        <Icon name="arrow-forward-ios" size={16} color="#94a3b8" />
-                      </TouchableOpacity>
-                    )}
-                    ListEmptyComponent={
-                      <Text style={styles.noLocationsText}>No states available</Text>
-                    }
-                  />
+                  {states.map((state, index) => (
+                    <TouchableOpacity
+                      key={`state-${state}-${index}`}
+                      style={styles.locationItem}
+                      onPress={() => handleStateSelect(state)}
+                    >
+                      <Text style={styles.locationItemText}>{state}</Text>
+                      <Icon name="arrow-forward-ios" size={16} color="#999" />
+                    </TouchableOpacity>
+                  ))}
                 </>
               )}
             </ScrollView>
           </View>
         </View>
       </Modal>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   screenBackground: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-  },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    paddingBottom: 24,
-    paddingHorizontal: 24,
-  },
-  headerContent: {
-    alignItems: 'center',
+    backgroundColor: '#ffffffff',
+    paddingHorizontal: 12,
   },
   logo: {
-    width: 120,
-    height: 40,
+    width: 100,
+    height: 100,
+    aspectRatio: 1,
+    marginBottom: 4,
     resizeMode: 'contain',
-    marginBottom: 16,
-    tintColor: 'white',
+  },
+  headerSection: {
+    alignItems: 'center',
+    marginVertical: 4,
   },
   title: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '700',
-    color: 'white',
+    color: '#7c60e4',
     textAlign: 'center',
-    marginBottom: 8,
-    paddingHorizontal: 16,
   },
   subtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '600',
-    letterSpacing: 1.5,
-  },
-  searchSection: {
-    paddingHorizontal: 16,
-    marginTop: -12,
-    zIndex: 10,
+    color: '#5a7fa4',
+    marginTop: 4,
+    fontWeight: '500',
+    letterSpacing: 0.6,
   },
   searchRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 8,
+    marginTop: 16,
+    width: '100%',
+    justifyContent: 'space-between',
   },
   locationSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 16,
+    backgroundColor: '#fff',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
     flex: 1,
-    ...Platform.select({
-      android: {
-        elevation: 4,
-      },
-      ios: {
-        shadowColor: '#0ea5e9',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-      }
-    })
+    marginRight: 12,
+    justifyContent: 'flex-start',
+    position: 'relative',
+    paddingRight: 30,
   },
   locationText: {
     flex: 1,
@@ -634,245 +506,169 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   locationPlaceholder: {
-    color: '#94a3b8',
+    color: '#999',
+    fontSize: 14,
   },
   locationSelectedText: {
-    color: '#1e293b',
-    fontWeight: '600',
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '500',
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 16,
-    paddingHorizontal: 16,
     flex: 2,
-    ...Platform.select({
-      android: {
-        elevation: 4,
-      },
-      ios: {
-        shadowColor: '#0ea5e9',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
-      }
-    })
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    alignItems: 'center',
+    position: 'relative',
   },
   searchIcon: {
-    marginRight: 12,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    paddingVertical: 14,
-    color: '#1e293b',
-  },
-  clearButton: {
-    padding: 4,
+    paddingVertical: 4,
   },
   suggestionList: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginTop: 4,
+    position: 'absolute',
+    top: 44,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    zIndex: 100,
+    elevation: 4,
     maxHeight: 200,
-    ...Platform.select({
-      android: {
-        elevation: 6,
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-      }
-    })
+    width: '100%',
   },
   suggestionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
+    padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: '#eee',
   },
   suggestionText: {
     fontSize: 14,
-    color: '#1e293b',
-    marginLeft: 12,
+    color: '#333',
   },
-  resultsHeader: {
+  providersHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    marginVertical: 14,
   },
-  resultsTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#1e293b',
-  },
-  resultsCount: {
-    backgroundColor: '#e0f2fe',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  resultsCountText: {
-    color: '#0369a1',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  listSpacing: {
-    paddingHorizontal: 16,
-    paddingBottom: 100,
-  },
-  cardContainer: {
-    marginBottom: 16,
-  },
-  cardGradient: {
-    borderRadius: 20,
-    padding: 20,
-    ...Platform.select({
-      android: {
-        elevation: 4,
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-      }
-    })
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  organizationInfo: {
-    flex: 1,
-  },
-  cardOrgName: {
+  providersTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 6,
+    color: '#321d6d',
+  },
+  providersCount: {
+    color: '#888',
+    fontSize: 14,
+    alignSelf: 'center',
+  },
+  listSpacing: {
+    paddingBottom: 80,
+  },
+  cardContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    marginBottom: 14,
+    padding: 18,
+    shadowColor: '#a085ff',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
+    borderWidth: 0.7,
+    borderColor: '#eee',
+    elevation: 4,
+  },
+  cardOrgName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#321d6d',
+    marginBottom: 4,
   },
   cardLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 8,
   },
   cardLocation: {
     marginLeft: 4,
-    color: '#0ea5e9',
-    fontSize: 14,
+    color: '#a085ff',
+    fontSize: 13,
     fontWeight: '600',
-  },
-  favoriteButton: {
-    padding: 8,
   },
   cardTagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   serviceTag: {
-    backgroundColor: '#e0f2fe',
-    borderRadius: 20,
+    backgroundColor: '#f4edff',
+    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 6,
     marginRight: 8,
     marginBottom: 8,
+    alignSelf: 'flex-start',
   },
   serviceTagText: {
-    color: '#0369a1',
+    color: '#7c60e4',
     fontSize: 13,
     fontWeight: '600',
   },
-  extraTag: {
-    backgroundColor: '#f3e8ff',
-  },
-  extraTagText: {
-    color: '#a21caf',
-    fontSize: 13,
-    fontWeight: '700',
-  },
   viewDetailsBtn: {
+    backgroundColor: '#7c60e4',
     borderRadius: 12,
-    overflow: 'hidden',
-  },
-  viewDetailsBtnGradient: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 12,
+    marginTop: 8,
   },
   viewDetailsText: {
     color: '#fff',
     fontWeight: '700',
     fontSize: 15,
-    marginRight: 8,
+    letterSpacing: 0.7,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 32,
-    borderRadius: 20,
-    ...Platform.select({
-      android: {
-        elevation: 8,
-      },
-      ios: {
-        shadowColor: '#0ea5e9',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 12,
-      }
-    })
+    padding: 20,
   },
   loadingText: {
-    marginTop: 16,
-    color: '#0ea5e9',
+    marginTop: 14,
+    color: '#7c60e4',
     fontWeight: '600',
-    fontSize: 16,
   },
   noResultsText: {
-    fontSize: 18,
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  resetButton: {
-    backgroundColor: '#0ea5e9',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  resetButtonText: {
-    color: 'white',
-    fontWeight: '600',
     fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '70%',
-    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 20,
+    width: '100%',
+    paddingBottom: 24,
+    height: '70%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -880,46 +676,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: '#eee',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1e293b',
+    color: '#321d6d',
   },
   modalScroll: {
     flex: 1,
+    paddingBottom: 24,
   },
   locationItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f8fafc',
+    borderBottomColor: '#f5f5f5',
   },
   locationItemText: {
     fontSize: 16,
-    color: '#1e293b',
+    color: '#321d6d',
   },
   selectLocationItem: {
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#f8f9fa',
   },
   selectLocationText: {
     fontWeight: '700',
-    color: '#0ea5e9',
-    fontSize: 16,
+    color: '#7c60e4',
   },
   selectLocationSubText: {
-    fontSize: 13,
-    color: '#64748b',
+    fontSize: 12,
+    color: '#888',
     marginTop: 2,
   },
   noLocationsText: {
-    padding: 20,
+    padding: 18,
     textAlign: 'center',
-    color: '#94a3b8',
+    color: '#888',
     fontStyle: 'italic',
   },
 });
