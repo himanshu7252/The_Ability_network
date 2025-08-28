@@ -1,14 +1,16 @@
-import React from 'react';
-import { 
-  View, 
-  Text, 
-  Image, 
-  ScrollView, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Linking, 
+import React, { useRef, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Linking,
   Dimensions,
-  Platform 
+  Platform,
+  Animated,
+  StatusBar,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -19,10 +21,37 @@ const { width } = Dimensions.get('window');
 
 type RootStackParamList = {
   PartnersScreen: undefined;
-  };
+};
 
 const HomeScreen = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const fadeAnimValue = useRef(new Animated.Value(0)).current;
+  const slideAnimValue = useRef(new Animated.Value(50)).current;
+  
+  // Animation states for features
+  const [featuresVisible, setFeaturesVisible] = useState(false);
+  
+  useEffect(() => {
+    // Initial animations
+    Animated.parallel([
+      Animated.timing(fadeAnimValue, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnimValue, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Delayed feature animation
+    setTimeout(() => {
+      setFeaturesVisible(true);
+    }, 400);
+  }, []);
 
   const handlePlayVideo = () => {
     Linking.openURL('https://youtu.be/dp4hhR51b5U');
@@ -40,208 +69,296 @@ const HomeScreen = () => {
     {
       icon: require('../assets/icons/digital.png'),
       title: 'Digital Accessibility',
-      subtitle: 'Accessible digital platform for all'
+      subtitle: 'Accessible digital platform for all',
+      color: '#0ea5e9'
     },
     {
       icon: require('../assets/icons/phygital.png'),
       title: 'Phygital Network',
-      subtitle: 'On-ground support presence'
+      subtitle: 'On-ground support presence',
+      color: '#d946ef'
     },
     {
       icon: require('../assets/icons/government.png'),
       title: 'Government Street',
-      subtitle: 'Integration of government schemes'
+      subtitle: 'Integration of government schemes',
+      color: '#10b981'
     },
     {
       icon: require('../assets/icons/phone.png'),
       title: 'Helpline Support',
-      subtitle: '24/7 assistance'
+      subtitle: '24/7 assistance',
+      color: '#f59e0b'
     },
     {
       icon: require('../assets/icons/whatsapp.png'),
       title: 'WhatsApp Integration',
-      subtitle: 'Multi-language chatbot'
+      subtitle: 'Multi-language chatbot',
+      color: '#ef4444'
     },
-    
   ];
 
-   const stats = [
+  const stats = [
     { value: '26', label: 'Partner Organizations' },
     { value: '90+', label: 'Projects' },
     { value: '18+', label: 'States' },
     { value: '63', label: 'Years of Impact' }
   ];
 
+  const FeatureCard = ({ feature, index }: { feature: any; index: number }) => {
+    const animValue = useRef(new Animated.Value(0)).current;
+    const scaleValue = useRef(new Animated.Value(0.8)).current;
+
+    useEffect(() => {
+      if (featuresVisible) {
+        Animated.parallel([
+          Animated.timing(animValue, {
+            toValue: 1,
+            duration: 500,
+            delay: index * 100,
+            useNativeDriver: true,
+          }),
+          Animated.spring(scaleValue, {
+            toValue: 1,
+            tension: 50,
+            friction: 7,
+            delay: index * 100,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+    }, [featuresVisible, index]);
+
+    return (
+      <Animated.View
+        style={[
+          styles.featureCard,
+          {
+            opacity: animValue,
+            transform: [{ scale: scaleValue }],
+          },
+        ]}
+      >
+        <View style={[styles.featureIconContainer, { backgroundColor: feature.color + '20' }]}>
+          <Image source={feature.icon} style={[styles.featureIcon, { tintColor: feature.color }]} />
+        </View>
+        <Text style={styles.featureTitle}>{feature.title}</Text>
+        <Text style={styles.featureSubtitle}>{feature.subtitle}</Text>
+      </Animated.View>
+    );
+  };
+
+  const StatCard = ({ stat, index }: { stat: any; index: number }) => {
+    const countValue = useRef(new Animated.Value(0)).current;
+    
+    useEffect(() => {
+      Animated.timing(countValue, {
+        toValue: 1,
+        duration: 1000,
+        delay: index * 200,
+        useNativeDriver: false,
+      }).start();
+    }, [index]);
+
+    return (
+      <View style={styles.statItem}>
+        <Text style={styles.statValue}>{stat.value}</Text>
+        <Text style={styles.statLabel}>{stat.label}</Text>
+      </View>
+    );
+  };
+
   return (
-    <ScrollView 
-      style={styles.container} 
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.contentContainer}
-    >
-      <LinearGradient
-        colors={['#0066b3', '#1c2325ff']}
-        style={styles.header}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#0ea5e9" />
+      
+      <Animated.ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
       >
-        <Image 
-          source={require('../assets/images/logo.png')} 
-          style={styles.logo}
-        />
-        <Text style={styles.tagline}>Discover - Connect - Dignify</Text>
-        <Text style={styles.title}>Ecosystem for Enabling Persons with Disabilities and their Caregivers</Text>
-      </LinearGradient>
-
-      <View style={styles.section}>
-        <Text style={styles.description}>
-          The Ability Network, a Tech Mahindra Foundation initiative, is an inclusive network of verified solution providers that provides access to curated information for persons with disabilities and their caregivers.
-        </Text>
-      </View>
-
-      <View style={styles.cardContainer}>
-        <View style={[styles.card, styles.visionCard]}>
-          <Icon name="visibility" size={28} color="#0066b3" style={styles.cardIcon} />
-          <Text style={styles.cardTitle}>Our Vision</Text>
-          <Text style={styles.cardText}>
-            We envision a world where Persons with Disabilities (PwDs) and their caregivers thrive with dignity and independence and are able to access resources that empower their full participation in society.
-          </Text>
-        </View>
-
-        <View style={[styles.card, styles.missionCard]}>
-          <Icon name="assistant-direction" size={28} color="#0066b3" style={styles.cardIcon} />
-          <Text style={styles.cardTitle}>Our Mission</Text>
-          <Text style={styles.cardText}>
-            To create a dynamic, accessible and collaborative human-centric network built around a digital core that provides information and access to curated services across life stages to Persons with Disabilities and their caregivers.
-          </Text>
-        </View>
-      </View>
-
-      <Text style={styles.sectionHeader}>Key Features</Text>
-      <View style={styles.featuresContainer}>
-        {features.map((feature, index) => (
-          <TouchableOpacity 
-            key={index} 
-            style={styles.featureCard}
-            activeOpacity={0.8}
-          >
-            <View style={styles.featureIconContainer}>
-              <Image source={feature.icon} style={styles.featureIcon} />
-            </View>
-            <Text style={styles.featureTitle}>{feature.title}</Text>
-            <Text style={styles.featureSubtitle}>{feature.subtitle}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <LinearGradient
-        colors={['#0066b3', '#00a0dc']}
-        style={styles.ecosystemBanner}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-      >
-        <Text style={styles.ecosystemTitle}>An Ecosystem for PwDs and Care Givers</Text>
-        <Text style={styles.ecosystemText}>
-          Discover how The Ability Network is transforming lives by connecting people with resources and support they need.
-        </Text>
-      </LinearGradient>
-
-      <TouchableOpacity 
-        style={styles.videoContainer} 
-        onPress={handlePlayVideo}
-        activeOpacity={0.9}
-      >
+        {/* Header Section with Gradient */}
         <LinearGradient
-          colors={['rgba(0, 102, 179, 0.7)', 'rgba(0, 160, 220, 0.7)']}
-          style={styles.videoPlaceholder}
+          colors={['#0ea5e9', '#0284c7', '#0369a1']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
         >
-          <Icon name="play-circle-filled" size={60} color="white" />
-          <Text style={styles.playText}>Watch Our Story</Text>
+          <Animated.View
+            style={[
+              styles.headerContent,
+              {
+                opacity: fadeAnimValue,
+                transform: [{ translateY: slideAnimValue }],
+              },
+            ]}
+          >
+            <Image source={require('../assets/images/logo.png')} style={styles.logo} />
+            <Text style={styles.tagline}>Discover - Connect - Dignify</Text>
+            <Text style={styles.title}>
+              Ecosystem for Enabling Persons with Disabilities and their Caregivers
+            </Text>
+            <Text style={styles.description}>
+              The Ability Network, a Tech Mahindra Foundation initiative, is an inclusive network of verified solution providers that provides access to curated information for persons with disabilities and their caregivers.
+            </Text>
+          </Animated.View>
         </LinearGradient>
-      </TouchableOpacity>
 
-      <TouchableOpacity 
-        style={styles.partnersContainer}
-        onPress={navigateToPartners}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.partnersTitle}>The Ability Network is a collaborative initiated by Tech Mahindra Foundation with the support from core partners:</Text>
-        <View style={styles.partnerLogos}>
-          {[1, 2, 3, 4].map((_, index) => (
-            <View key={index} style={styles.partnerLogoContainer}>
-              <Image source={require('../assets/images/logo.png')} style={styles.partnerLogo} />
+        {/* Vision and Mission Cards */}
+        <View style={styles.cardContainer}>
+          <Animated.View style={[styles.card, styles.visionCard, { opacity: fadeAnimValue }]}>
+            <View style={styles.cardHeader}>
+              <Icon name="visibility" size={28} color="#0ea5e9" />
+              <Text style={styles.cardTitle}>Our Vision</Text>
             </View>
-          ))}
-        </View>
-        <Text style={styles.viewMore}>View all partners →</Text>
-      </TouchableOpacity>
+            <Text style={styles.cardText}>
+              We envision a world where Persons with Disabilities (PwDs) and their caregivers thrive with dignity and independence and are able to access resources that empower their full participation in society.
+            </Text>
+          </Animated.View>
 
-      <View style={styles.ctaContainer}>
-        <Text style={styles.ctaTitle}>Transform Lives Together</Text>
-        <Text style={styles.ctaText}>
-          The Ability Network offers a wide range of features and benefits that will revolutionize support for PwDs and their caregivers.Join our mission to create meaningful change and ensure everyone has the opportunity to thrive.Join the Network
-
-        </Text>
-        <TouchableOpacity style={styles.joinButton}>
-          <Text style={styles.joinButtonText}>Join The Network</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.foundationContainer}>
-        <Text style={styles.sectionHeader}>About Tech Mahindra Foundation</Text>
-        <Image 
-          source={require('../assets/images/logo.png')} 
-          style={styles.foundationLogo}
-        />
-        <Text style={styles.foundationText}>
-          Tech Mahindra Foundation is the Corporate Social Responsibility (CSR) arm of Tech Mahindra Limited, a Mahindra Group Company. Since 2006, guided by the vision of Empowerment through Education.
-        </Text>
-        
-        <View style={styles.statsContainer}>
-          {stats.map((stat, index) => (
-            <View key={index} style={styles.statItem}>
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
+          <Animated.View style={[styles.card, styles.missionCard, { opacity: fadeAnimValue }]}>
+            <View style={styles.cardHeader}>
+              <Icon name="track-changes" size={28} color="#10b981" />
+              <Text style={styles.cardTitle}>Our Mission</Text>
             </View>
-          ))}
+            <Text style={styles.cardText}>
+              To create a dynamic, accessible and collaborative human-centric network built around a digital core that provides information and access to curated services across life stages to Persons with Disabilities and their caregivers.
+            </Text>
+          </Animated.View>
         </View>
-        
-        <TouchableOpacity 
-          style={styles.websiteButton} 
-          onPress={handleVisitWebsite}
-          activeOpacity={0.8}
+
+        {/* Key Features Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>Key Features</Text>
+          <View style={styles.featuresContainer}>
+            {features.map((feature, index) => (
+              <FeatureCard key={index} feature={feature} index={index} />
+            ))}
+          </View>
+        </View>
+
+        {/* Ecosystem Banner */}
+        <LinearGradient
+          colors={['#d946ef', '#c026d3', '#a21caf']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.ecosystemBanner}
         >
-          <Text style={styles.buttonText}>Visit Foundation Website</Text>
-        </TouchableOpacity>
-      </View>
+          <Text style={styles.ecosystemTitle}>An Ecosystem for PwDs and Care Givers</Text>
+          <Text style={styles.ecosystemText}>
+            Discover how The Ability Network is transforming lives by connecting people with resources and support they need.
+          </Text>
+          
+          <TouchableOpacity style={styles.videoButton} onPress={handlePlayVideo}>
+            <LinearGradient
+              colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+              style={styles.videoButtonGradient}
+            >
+              <Icon name="play-circle-outline" size={32} color="#fff" />
+              <Text style={styles.videoButtonText}>Watch Our Story</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </LinearGradient>
 
-      <View style={styles.networkPartners}>
-        <Text style={styles.sectionHeader}>Our Network Partners</Text>
-        <Text style={styles.partnerSubtitle}>Collaborating with leading organizations to create meaningful impact</Text>
-        
-        <View style={styles.partnerCategories}>
-          <View style={styles.category}>
-            <Text style={styles.categoryTitle}>Co-Creators</Text>
-            <View style={styles.categoryLogos}>
-              {[1, 2, 3].map((_, index) => (
-                <View key={index} style={styles.networkLogoContainer}>
-                  <Image source={require('../assets/images/logo.png')} style={styles.networkLogo} />
-                </View>
-              ))}
-            </View>
+        {/* Partners Section */}
+        <View style={styles.partnersContainer}>
+          <Text style={styles.partnersTitle}>
+            The Ability Network is a collaborative initiated by Tech Mahindra Foundation with the support from core partners:
+          </Text>
+          
+          <View style={styles.partnerLogos}>
+            {[1, 2, 3, 4].map((_, index) => (
+              <View key={index} style={styles.partnerLogoContainer}>
+                <View style={styles.partnerLogo} />
+              </View>
+            ))}
           </View>
           
-          <View style={styles.category}>
-            <Text style={styles.categoryTitle}>Research, Policy & Advocacy Partners</Text>
-            <Text style={styles.categorySubtitle}>Leading research institutions and policy makers shaping the future</Text>
-            <View style={styles.categoryLogos}>
-              <View style={styles.networkLogoContainer}>
-                <Image source={require('../assets/images/logo.png')} style={styles.networkLogo} />
+          <TouchableOpacity onPress={navigateToPartners}>
+            <Text style={styles.viewMore}>View all partners →</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* CTA Section */}
+        <LinearGradient
+          colors={['#0ea5e9', '#0284c7']}
+          style={styles.ctaContainer}
+        >
+          <Text style={styles.ctaTitle}>Transform Lives Together</Text>
+          <Text style={styles.ctaText}>
+            The Ability Network offers a wide range of features and benefits that will revolutionize support for PwDs and their caregivers. Join our mission to create meaningful change and ensure everyone has the opportunity to thrive.
+          </Text>
+          
+          <TouchableOpacity style={styles.joinButton}>
+            <LinearGradient
+              colors={['#fff', '#f8fafc']}
+              style={styles.joinButtonGradient}
+            >
+              <Text style={styles.joinButtonText}>Join The Network</Text>
+              <Icon name="arrow-forward" size={20} color="#0ea5e9" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </LinearGradient>
+
+        {/* Foundation Section */}
+        <View style={styles.foundationContainer}>
+          <Text style={styles.foundationTitle}>About Tech Mahindra Foundation</Text>
+          <View style={styles.foundationLogo} />
+          <Text style={styles.foundationText}>
+            Tech Mahindra Foundation is the Corporate Social Responsibility (CSR) arm of Tech Mahindra Limited, a Mahindra Group Company. Since 2006, guided by the vision of Empowerment through Education.
+          </Text>
+          
+          <View style={styles.statsContainer}>
+            {stats.map((stat, index) => (
+              <StatCard key={index} stat={stat} index={index} />
+            ))}
+          </View>
+          
+          <TouchableOpacity style={styles.websiteButton} onPress={handleVisitWebsite}>
+            <LinearGradient
+              colors={['#0ea5e9', '#0284c7']}
+              style={styles.websiteButtonGradient}
+            >
+              <Text style={styles.buttonText}>Visit Foundation Website</Text>
+              <Icon name="open-in-new" size={18} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        {/* Network Partners */}
+        <View style={styles.networkPartners}>
+          <Text style={styles.sectionHeader}>Our Network Partners</Text>
+          <Text style={styles.partnerSubtitle}>
+            Collaborating with leading organizations to create meaningful impact
+          </Text>
+          
+          <View style={styles.partnerCategories}>
+            <View style={styles.category}>
+              <Text style={styles.categoryTitle}>Co-Creators</Text>
+              <View style={styles.categoryLogos}>
+                {[1, 2, 3].map((_, index) => (
+                  <View key={index} style={styles.networkLogoContainer}>
+                    <View style={styles.networkLogo} />
+                  </View>
+                ))}
               </View>
+            </View>
+            
+            <View style={styles.category}>
+              <Text style={styles.categoryTitle}>Research, Policy & Advocacy Partners</Text>
+              <Text style={styles.categorySubtitle}>
+                Leading research institutions and policy makers shaping the future
+              </Text>
             </View>
           </View>
         </View>
-      </View>
-    </ScrollView>
+      </Animated.ScrollView>
+    </View>
   );
 };
 
@@ -250,359 +367,327 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
+  scrollView: {
+    flex: 1,
+  },
   contentContainer: {
     paddingBottom: 40,
   },
   header: {
-    padding: 24,
-    paddingTop: Platform.OS === 'ios' ? 50 : 24,
-    paddingBottom: 32,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 40,
+    paddingHorizontal: 24,
+  },
+  headerContent: {
     alignItems: 'center',
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    marginBottom: 16,
-    ...Platform.select({
-      android: {
-        elevation: 4,
-      },
-      ios: {
-        shadowColor: '#0066b3',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-      }
-    })
   },
   logo: {
-    width: 180,
-    height: 50,
+    width: 200,
+    height: 60,
     resizeMode: 'contain',
-    marginBottom: 16,
+    marginBottom: 20,
     tintColor: 'white',
   },
   tagline: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  title: {
     fontSize: 18,
     fontWeight: '700',
-    textAlign: 'center',
     color: 'white',
-    marginTop: 8,
-    lineHeight: 24,
+    marginBottom: 12,
+    letterSpacing: 1,
+    textAlign: 'center',
   },
-  section: {
-    padding: 24,
-    paddingBottom: 16,
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    color: 'rgba(255,255,255,0.95)',
+    marginBottom: 16,
+    lineHeight: 26,
+    paddingHorizontal: 16,
   },
   description: {
-    fontSize: 15,
+    fontSize: 16,
     lineHeight: 24,
-    color: '#334155',
+    color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
+    paddingHorizontal: 8,
   },
   cardContainer: {
     paddingHorizontal: 16,
-    marginBottom: 24,
+    marginTop: -20,
+    zIndex: 10,
   },
   card: {
     backgroundColor: 'white',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 24,
-    marginBottom: 20,
+    marginBottom: 16,
     ...Platform.select({
       android: {
-        elevation: 3,
+        elevation: 8,
       },
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
       }
     })
   },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   visionCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#00a0dc',
+    borderLeftWidth: 6,
+    borderLeftColor: '#0ea5e9',
   },
   missionCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#34d399',
-  },
-  cardIcon: {
-    marginBottom: 12,
+    borderLeftWidth: 6,
+    borderLeftColor: '#10b981',
   },
   cardTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0066b3',
-    marginBottom: 12,
-  },
-  cardText: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: '#475569',
-  },
-  sectionHeader: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#0066b3',
-    marginHorizontal: 24,
-    marginBottom: 16,
-    marginTop: 8,
+    color: '#1e293b',
+    marginLeft: 12,
+  },
+  cardText: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#475569',
+  },
+  section: {
+    paddingHorizontal: 16,
+    marginTop: 32,
+  },
+  sectionHeader: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 24,
+    textAlign: 'center',
   },
   featuresContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    marginBottom: 24,
   },
   featureCard: {
     width: (width - 48) / 2,
     backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 20,
+    padding: 20,
     marginBottom: 16,
     alignItems: 'center',
-    ...Platform.select({
-      android: {
-        elevation: 2,
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-      }
-    })
-  },
-  featureIconContainer: {
-    backgroundColor: '#e6f7ff',
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  featureIcon: {
-    width: 32,
-    height: 32,
-    tintColor: '#0066b3',
-  },
-  featureTitle: {
-    fontWeight: '700',
-    textAlign: 'center',
-    color: '#0066b3',
-    marginBottom: 4,
-    fontSize: 15,
-  },
-  featureSubtitle: {
-    fontSize: 13,
-    textAlign: 'center',
-    color: '#64748b',
-    lineHeight: 18,
-  },
-  ecosystemBanner: {
-    padding: 24,
-    marginHorizontal: 16,
-    borderRadius: 16,
-    marginBottom: 24,
     ...Platform.select({
       android: {
         elevation: 4,
       },
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      }
+    })
+  },
+  featureIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  featureIcon: {
+    width: 32,
+    height: 32,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  featureSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#64748b',
+    lineHeight: 20,
+  },
+  ecosystemBanner: {
+    margin: 16,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    ...Platform.select({
+      android: {
+        elevation: 8,
+      },
+      ios: {
+        shadowColor: '#d946ef',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
       }
     })
   },
   ecosystemTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '800',
     color: 'white',
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: 'center',
   },
   ecosystemText: {
-    fontSize: 15,
+    fontSize: 16,
     color: 'rgba(255,255,255,0.95)',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24,
+    marginBottom: 24,
   },
-  videoContainer: {
-    marginHorizontal: 16,
+  videoButton: {
     borderRadius: 16,
     overflow: 'hidden',
-    marginBottom: 24,
-    height: 200,
-    ...Platform.select({
-      android: {
-        elevation: 3,
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-      }
-    })
   },
-  videoPlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
+  videoButtonGradient: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#94a3b8',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
   },
-  playText: {
-    marginTop: 12,
+  videoButtonText: {
     color: 'white',
     fontWeight: '700',
-    fontSize: 18,
+    fontSize: 16,
+    marginLeft: 12,
   },
   partnersContainer: {
     backgroundColor: 'white',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 24,
     marginHorizontal: 16,
-    marginBottom: 24,
+    marginTop: 24,
     ...Platform.select({
       android: {
-        elevation: 2,
+        elevation: 4,
       },
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
       }
     })
   },
   partnersTitle: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 20,
-    color: '#334155',
+    marginBottom: 24,
+    color: '#475569',
     lineHeight: 24,
   },
   partnerLogos: {
     flexDirection: 'row',
     justifyContent: 'center',
     flexWrap: 'wrap',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   partnerLogoContainer: {
     backgroundColor: '#f1f5f9',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     margin: 8,
   },
   partnerLogo: {
     width: 70,
     height: 70,
-    resizeMode: 'contain',
+    backgroundColor: '#e2e8f0',
+    borderRadius: 8,
   },
   viewMore: {
-    color: '#00a0dc',
+    color: '#0ea5e9',
     fontWeight: '600',
     textAlign: 'center',
     fontSize: 16,
-    marginTop: 8,
   },
   ctaContainer: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 24,
-    marginHorizontal: 16,
-    marginBottom: 24,
+    margin: 16,
+    borderRadius: 24,
+    padding: 32,
     alignItems: 'center',
-    ...Platform.select({
-      android: {
-        elevation: 2,
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      }
-    })
   },
   ctaTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#0066b3',
-    marginBottom: 12,
+    fontSize: 26,
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: 16,
     textAlign: 'center',
   },
   ctaText: {
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
-    color: '#475569',
-    marginBottom: 24,
+    color: 'rgba(255,255,255,0.95)',
+    marginBottom: 28,
   },
   joinButton: {
-    backgroundColor: '#0066b3',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  joinButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    ...Platform.select({
-      android: {
-        elevation: 3,
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      }
-    })
+    paddingHorizontal: 32,
   },
   joinButtonText: {
-    color: 'white',
+    color: '#0ea5e9',
     fontWeight: '700',
     fontSize: 18,
+    marginRight: 8,
   },
   foundationContainer: {
     backgroundColor: 'white',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 24,
     marginHorizontal: 16,
-    marginBottom: 24,
+    marginTop: 24,
     alignItems: 'center',
     ...Platform.select({
       android: {
-        elevation: 2,
+        elevation: 4,
       },
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
       }
     })
+  },
+  foundationTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   foundationLogo: {
     width: 200,
     height: 60,
-    resizeMode: 'contain',
-    marginVertical: 16,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 8,
+    marginVertical: 20,
   },
   foundationText: {
     fontSize: 16,
     lineHeight: 24,
     color: '#475569',
-    marginBottom: 20,
+    marginBottom: 24,
     textAlign: 'center',
   },
   statsContainer: {
@@ -620,7 +705,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 36,
     fontWeight: '800',
-    color: '#0066b3',
+    color: '#0ea5e9',
     marginBottom: 4,
   },
   statLabel: {
@@ -630,42 +715,37 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   websiteButton: {
-    backgroundColor: '#0066b3',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  websiteButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    ...Platform.select({
-      android: {
-        elevation: 3,
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      }
-    })
+    paddingHorizontal: 32,
   },
   buttonText: {
     color: 'white',
     fontWeight: '700',
     fontSize: 16,
+    marginRight: 8,
   },
   networkPartners: {
     backgroundColor: 'white',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 24,
     marginHorizontal: 16,
+    marginTop: 24,
     marginBottom: 32,
     ...Platform.select({
       android: {
-        elevation: 2,
+        elevation: 4,
       },
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
       }
     })
   },
@@ -680,13 +760,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   category: {
-    marginBottom: 28,
+    marginBottom: 32,
     alignItems: 'center'
   },
   categoryTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#0066b3',
+    color: '#1e293b',
     marginBottom: 12,
   },
   categorySubtitle: {
@@ -694,10 +774,12 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginBottom: 16,
     lineHeight: 20,
+    textAlign: 'center',
   },
   categoryLogos: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   networkLogoContainer: {
     backgroundColor: '#f8fafc',
@@ -709,7 +791,8 @@ const styles = StyleSheet.create({
   networkLogo: {
     width: 80,
     height: 40,
-    resizeMode: 'contain',
+    backgroundColor: '#e2e8f0',
+    borderRadius: 6,
   },
 });
 
