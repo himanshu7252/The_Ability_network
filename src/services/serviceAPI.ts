@@ -4,7 +4,7 @@ export const fetchServices = async (
   states = "",
   disabilities = ""
 ) => {
-  const url = `https://stg-api.abilitynetwork.in/api/services/search?query=${query}&cities=${cities}&states=${states}&disabilities=${disabilities}`;
+  const url = `privacy`;
 
   try {
     const response = await fetch(url);
