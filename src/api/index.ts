@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://stg-api.abilitynetwork.in/api';
+const API_BASE_URL = 'privacy';
 
 const DEFAULT_TIMEOUT = 10000; // 10s
 
